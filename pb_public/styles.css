@@ -18,6 +18,8 @@
   --neutral-soft: #f0f2f5;
   --pink: #c11574;
   --pink-soft: #fdf2fa;
+  --hero-from: #4f46e5; /* the accent */
+  --hero-to: #7c3aed;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
   --radius: 10px;
 
@@ -43,6 +45,8 @@
     --neutral-soft: #242830;
     --pink: #f670c7;
     --pink-soft: #3a1a30;
+    --hero-from: #4338ca; /* deeper than the dark-mode accent, so white text stays readable */
+    --hero-to: #6d28d9;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 
     color-scheme: dark;
@@ -256,15 +260,82 @@ input {
 .page-head h2 { margin-bottom: 0.25rem; }
 .page-head p { margin: 0; }
 
-.summary { padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+/* ---------- new-hire welcome hero ---------- */
 
-.summary-row {
+.hero {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.6rem;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  border-radius: 14px;
+  background: linear-gradient(120deg, var(--hero-from), var(--hero-to));
+  color: #fff;
+  box-shadow: var(--shadow);
 }
+.hero-text { min-width: 0; }
+.hero h2 { margin: 0 0 0.35rem; font-size: 1.6rem; color: #fff; }
+.hero p { margin: 0; }
+.hero-meta { margin-top: 0.35rem !important; opacity: 0.85; font-size: 0.95rem; }
+/* Wrap only between "1 of 11 done" and "· Manager: …", never inside either. */
+#progress-text, #hero-manager { white-space: nowrap; }
+
+/* Progress ring: a conic gradient (--p is the percent) cut into a ring with a radial mask. */
+.ring {
+  --p: 0;
+  position: relative;
+  flex-shrink: 0;
+  width: 6.5rem;
+  height: 6.5rem;
+  display: grid;
+  place-items: center;
+}
+.ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#fff calc(var(--p) * 1%), rgba(255, 255, 255, 0.25) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 0.6rem), #000 calc(100% - 0.55rem));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 0.6rem), #000 calc(100% - 0.55rem));
+}
+.ring-percent { position: relative; font-size: 1.35rem; font-weight: 700; }
+
+.checklist-heading { margin: 0 0 1rem; }
+
+/* ---------- "Ask Liftoff" assistant (mockup) ---------- */
+
+.assistant { padding: 1.25rem; margin-bottom: 1.75rem; }
+.assistant-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.assistant-head h3 { margin: 0 0.25rem 0 0; font-size: 1.1rem; }
+.ai-chip { background: var(--accent-soft); color: var(--accent); }
+
+.messages { display: flex; flex-direction: column; gap: 0.6rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.message {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--neutral-soft);
+}
+.avatar {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.avatar-user { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
+.avatar-bot { background: linear-gradient(120deg, var(--hero-from), var(--hero-to)); font-size: 1.1rem; }
+.message-body { min-width: 0; }
+.message-who { display: block; margin-bottom: 0.15rem; }
+.message-text { margin: 0; }
+
+.ask-input { cursor: not-allowed; opacity: 0.7; }
 
 .progress {
   height: 0.6rem;
@@ -665,7 +736,12 @@ body.panel-open { overflow: hidden; }
   .who .badge { display: none; } /* the page title already says which view this is */
   .content { padding-top: 1rem; }
   .task { padding: 0.9rem 1rem; }
-  .summary { padding: 0.9rem 1rem; }
+  .hero { gap: 1rem; padding: 1.1rem 1.1rem; align-items: flex-start; }
+  .hero h2 { font-size: 1.3rem; }
+  .ring { width: 4.75rem; height: 4.75rem; }
+  .ring-percent { font-size: 1.05rem; }
+  .assistant { padding: 1rem; }
+  .message { padding: 0.75rem; gap: 0.65rem; }
   .kpis { gap: 0.5rem; }
   .kpi { padding: 0.75rem; }
   .kpi-label { font-size: 0.75rem; }

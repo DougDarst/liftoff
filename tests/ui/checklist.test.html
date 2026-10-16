@@ -14,8 +14,23 @@
   run(async () => {
     await until(() => app().querySelector("#checklist-body .task"), "checklist to load");
 
-    check("cohort line names the cohort", $app("cohort-line").textContent.startsWith("November 2026 cohort · Starts "));
+    // Welcome hero (start-date wording depends on today, so accept either tense)
+    eq("hero greets by first name", $app("hero-title").textContent, "Welcome, Sam! 👋");
+    check("hero line: start date, team, and location",
+      /^You (start|started) Monday, Nov 2 on Merchant\. Liftoff week (is|was) in San Francisco\.$/.test($app("hero-line").textContent),
+      $app("hero-line").textContent);
+    eq("hero shows the manager", $app("hero-manager").textContent, "· Manager: Jordan Kim");
     eq("progress starts at 1 of 11", progressText(), "1 of 11 done");
+    eq("ring shows the percent", $app("ring-percent").textContent, "9%");
+    eq("ring reports progress to screen readers", $app("progress-ring").getAttribute("aria-valuenow"), "9");
+
+    // "Ask Liftoff" mockup: a sample answer built from Sam's own checklist
+    const answer = () => [...app().querySelectorAll(".message-text")][1].textContent;
+    eq("assistant: Sam's initials on his message", app().querySelector(".avatar-user").textContent, "SO");
+    check("assistant answer points at his open IT task and the flag feature",
+      answer().startsWith("“SSO and GitHub access verified” is an IT task") && answer().includes("“Flag a blocker”"), answer());
+    check("assistant answer names his manager", answer().endsWith("Your manager, Jordan Kim, can help too."), answer());
+    check("assistant input is disabled (mockup)", app().querySelector(".ask-input").disabled);
     eq("tasks grouped by week",
       [...app().querySelectorAll(".week-title")].map((h) => `${h.textContent} (${h.nextSibling.children.length})`).join(", "),
       "Before you arrive (5), Liftoff week (5), 30-day follow-up (1)");
@@ -71,5 +86,13 @@
     taskRow(lab).querySelector(".task-check").click();
     await until(() => progressText() === "2 of 11 done", "untick after quick ticks");
     check("screen and server stayed in sync (untick works)", !visible("checklist-error"));
+    eq("ring follows progress", $app("ring-percent").textContent, "18%");
+
+    // Flag the IT task: the assistant's sample answer follows the real status.
+    const sso = "SSO and GitHub access verified";
+    taskRow(sso).querySelector(".flag .link-button").click();
+    taskRow(sso).querySelector(".flag-form").requestSubmit();
+    await until(() => chip(sso) === "Blocked", "flag the IT task");
+    check("assistant answer notices the blocked IT task", answer().includes("you've already flagged it as blocked"), answer());
   });
 </script>

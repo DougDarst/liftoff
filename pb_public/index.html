@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <!-- ?v= is a content hash so caches pick up changes at once; update with tests/asset-versions.sh --fix -->
-  <link rel="stylesheet" href="styles.css?v=308a5b4f00">
+  <link rel="stylesheet" href="styles.css?v=eaa16e1ed0">
 
   <!-- integrity: the browser refuses the SDK if the CDN ever serves different bytes. If you change
        the SDK version, recompute it:
@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js"
     integrity="sha384-Pr74Q4nJqBcqXYMrsOS8tSw8t8N0Nayn7pWqFRdz9MsePI7uo55HNdxwrCcIRD8e"
     crossorigin="anonymous"></script>
-  <script src="app.js?v=978b26f25d" defer></script>
+  <script src="app.js?v=7909ef26db" defer></script>
 </head>
 <body>
   <!-- Shown until the session check finishes and app.js picks a view -->
@@ -121,21 +121,32 @@
       </section>
 
       <section id="checklist-view" hidden>
-        <div class="page-head">
-          <h2>My Checklist</h2>
-          <p id="cohort-line" class="muted"></p>
-        </div>
-
-        <div id="checklist-summary" class="card summary" hidden>
-          <div class="summary-row">
-            <span>Your progress</span>
-            <span id="progress-text"></span>
+        <!-- Welcome hero: who you are, when you start, and your progress ring -->
+        <div id="hero" class="hero" hidden>
+          <div id="progress-ring" class="ring" role="progressbar" aria-label="Checklist progress"
+               aria-valuemin="0" aria-valuemax="100">
+            <span id="ring-percent" class="ring-percent"></span>
           </div>
-          <div id="progress-bar" class="progress" role="progressbar" aria-label="Checklist progress" aria-valuemin="0">
-            <div id="progress-fill" class="progress-fill"></div>
+          <div class="hero-text">
+            <h2 id="hero-title"></h2>
+            <p id="hero-line"></p>
+            <p class="hero-meta"><span id="progress-text"></span> <span id="hero-manager"></span></p>
           </div>
         </div>
 
+        <!-- Mockup: a static sample exchange built from the user's own checklist. See renderAssistant. -->
+        <section id="assistant" class="card assistant" aria-labelledby="assistant-title" hidden>
+          <div class="assistant-head">
+            <h3 id="assistant-title">Ask Liftoff</h3>
+            <span class="chip ai-chip">AI assistant</span>
+            <span class="chip preview-chip" title="A design preview: the assistant isn't live yet">Preview</span>
+          </div>
+          <ol id="assistant-messages" class="messages"></ol>
+          <input class="ask-input" type="text" disabled
+                 placeholder="Ask anything · coming soon" aria-label="Ask Liftoff (coming soon)">
+        </section>
+
+        <h2 class="checklist-heading">My Checklist</h2>
         <p id="checklist-error" class="error" role="alert" hidden></p>
         <div id="checklist-body"></div>
       </section>

@@ -130,8 +130,8 @@ async function loadChecklist(user) {
   if (sessionExpired()) return;
   checklist = null;
   hideChecklistError();
-  $("checklist-summary").hidden = true;
-  $("cohort-line").textContent = "";
+  $("hero").hidden = true;
+  $("assistant").hidden = true;
 
   if (!user.cohort) {
     $("checklist-body").replaceChildren(
@@ -162,10 +162,10 @@ async function loadChecklist(user) {
 }
 
 function renderChecklist() {
-  const { cohort, tasks } = checklist;
+  const { tasks } = checklist;
 
-  $("cohort-line").textContent = `${cohort.name} · Starts ${formatDate(cohort.start_date)}`;
-  renderProgressSummary(tasks);
+  renderHero();
+  renderAssistant();
 
   if (tasks.length === 0) {
     $("checklist-body").replaceChildren(el("div", "card placeholder", "No tasks have been added to your cohort yet."));
@@ -189,14 +189,76 @@ function renderWeekGroups(tasks, renderItem) {
   });
 }
 
-function renderProgressSummary(tasks) {
+// "Welcome, Priya! 👋", start date, team and location, manager, and the progress ring.
+// Everything comes from the user's record and cohort; lines with missing data are left out.
+function renderHero() {
+  const { user, cohort, tasks } = checklist;
   const done = tasks.filter((task) => statusOf(task) === "done").length;
   const percent = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+  $("progress-ring").style.setProperty("--p", String(percent));
+  $("progress-ring").setAttribute("aria-valuenow", String(percent));
+  $("ring-percent").textContent = `${percent}%`;
   $("progress-text").textContent = `${done} of ${tasks.length} done`;
-  $("progress-fill").style.width = `${percent}%`;
-  $("progress-bar").setAttribute("aria-valuemax", "100");
-  $("progress-bar").setAttribute("aria-valuenow", String(percent));
-  $("checklist-summary").hidden = false;
+  $("hero-manager").textContent = user.manager_name ? `· Manager: ${user.manager_name}` : "";
+
+  const firstName = (user.name || "").trim().split(/\s+/)[0];
+  $("hero-title").textContent = firstName ? `Welcome, ${firstName}! 👋` : "Welcome! 👋";
+
+  // "You start Monday, Nov 2 on Checkout. Liftoff week is in San Francisco." (tense follows the date)
+  const start = new Date(cohort.start_date.replace(" ", "T"));
+  const today = new Date();
+  const weekEnd = new Date(start);
+  weekEnd.setDate(start.getDate() + 5);
+  const day = start.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const line = $("hero-line");
+  line.replaceChildren(`${today < start ? "You start" : "You started"} ${day}`);
+  if (user.team) line.append(" on ", el("strong", "", user.team));
+  line.append(".");
+  if (cohort.location) line.append(` Liftoff week ${today < weekEnd ? "is" : "was"} in ${cohort.location}.`);
+
+  $("hero").hidden = false;
+}
+
+// ---------- "Ask Liftoff" assistant (design mockup) ----------
+
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  return parts.length ? (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase() : "?";
+}
+
+// A static sample exchange, not a real assistant. The answer is built from the user's own
+// checklist so it points at features that exist: IT tasks, "Flag a blocker", the coordinator.
+function assistantAnswer() {
+  const { user, tasks } = checklist;
+  const itTask = tasks.find((task) => task.owner_type === "it" && statusOf(task) !== "done");
+  let answer;
+  if (!itTask) {
+    answer = "Your IT tasks are all done, so your access should be set. If something still doesn't work, tell your coordinator.";
+  } else if (statusOf(itTask) === "blocked") {
+    answer = `“${itTask.title}” is an IT task on your checklist, and you've already flagged it as blocked, so your coordinator can see it on their dashboard.`;
+  } else {
+    answer = `“${itTask.title}” is an IT task on your checklist. If it's taking more than a day, use “Flag a blocker” on it and your coordinator will see it right away.`;
+  }
+  if (user.manager_name) answer += ` Your manager, ${user.manager_name}, can help too.`;
+  return answer;
+}
+
+function renderMessage(avatar, avatarClass, who, text) {
+  const item = el("li", "message");
+  const badge = el("span", `avatar ${avatarClass}`, avatar);
+  badge.setAttribute("aria-hidden", "true");
+  const body = el("div", "message-body");
+  body.append(el("strong", "message-who", who), el("p", "message-text", text));
+  item.append(badge, body);
+  return item;
+}
+
+function renderAssistant() {
+  $("assistant-messages").replaceChildren(
+    renderMessage(initials(checklist.user.name), "avatar-user", "You", "Who do I ask about getting my access sorted?"),
+    renderMessage("🚀", "avatar-bot", "Liftoff", assistantAnswer()));
+  $("assistant").hidden = false;
 }
 
 function renderTask(task) {
