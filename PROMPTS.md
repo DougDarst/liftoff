@@ -96,6 +96,10 @@ Polish pass:
 - Check the layout at 375px wide.
 - Make sure all user data is written with textContent, not innerHTML.
 - Remove dead code and console noise.
+- Let a signed-in user change their own password (current password + new password + confirm),
+  so a new hire can replace the temporary one from "Add new hire". The API already allows this
+  for one's own record; don't change any access rules. Sign them back in afterwards, since
+  changing the password ends existing sessions.
 Summarize what you changed.
 ```
 
