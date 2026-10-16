@@ -41,7 +41,7 @@ Running notes while building with Claude Code. One or two lines per step is plen
 - **#7:** testing turned up a side effect it hadn't predicted. The #2 rule was already partly blocking stale rows, because the rule's check on a task respects the tasks collection's own access rule. We made that explicit in the rules.
 - **#9:** it first overstated the risk. Testing showed `serve` re-applies every migration on startup, so a rolled-back state can't persist.
 - Its first rule test returned a 404 that looked like a pass but had hit the wrong row (an IT task). It noticed and re-ran the test on the right row.
-| 2 Checklist | | | | |
+| 2 Checklist | Step 2 prompt: cohort header, tasks grouped by week, owner badges and status, check off own tasks, IT/manager read-only, X-of-Y progress bar, few requests. | All of it in 3 requests per load, progress limited to the current cohort (#7), weeks grouped from the data rather than hard-coded (#8). It applied the review's UI notes without being asked: a "Flag a blocker" action with a note on IT/manager tasks, and clearing `completed_at` on uncheck (#3). Tested by clicking through as Sam in headless Chrome and reading the rows back from the server. | Nothing in the code. Asking "how does a blocker get cleared?" showed a gap: only a coordinator can clear one, and until step 3's side panel exists that means using the admin UI. | |
 | 3 Dashboard | | | | |
 | 4 Security check | | | | |
 | 6 Polish | | | | |
