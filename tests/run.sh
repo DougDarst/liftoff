@@ -50,6 +50,12 @@ build_public_dir() {
 
 start_server() {
   stop_server
+  # If something already answers on this port, our server would fail to bind and the tests would
+  # silently run (and write) against that other server instead. Refuse.
+  if curl -s -o /dev/null --max-time 2 "$BASE/" 2>/dev/null; then
+    echo "Port $PORT is already in use. Stop whatever is running there, or pick another port: PORT=8199 ./tests/run.sh" >&2
+    exit 2
+  fi
   rm -rf "$TMP/data"
   # On a database with no superuser, `serve` opens the "create superuser" page in your browser.
   # A throwaway superuser with a random password keeps test runs silent.
