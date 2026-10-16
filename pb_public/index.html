@@ -1,9 +1,65 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Liftoff</title></head>
-<body style="font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem">
-  <h1>Liftoff</h1>
-  <p>The backend is running. The frontend gets built here. Follow <code>PROMPTS.md</code>, step 1.</p>
-  <p>Admin UI: <a href="/_/">/_/</a></p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liftoff</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- Login -->
+  <main id="login-view" class="login" hidden>
+    <form id="login-form" class="card login-card" novalidate>
+      <h1 class="brand">Liftoff</h1>
+      <p class="muted">Onboarding for new engineers. Sign in to continue.</p>
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <p id="login-error" class="error" role="alert" hidden></p>
+
+      <button id="login-button" type="submit" class="button primary">Sign in</button>
+    </form>
+  </main>
+
+  <!-- Signed in -->
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <span class="brand">Liftoff</span>
+      <div class="who">
+        <span id="user-name" class="user-name"></span>
+        <span id="user-role" class="badge"></span>
+        <button id="signout-button" type="button" class="button">Sign out</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section id="dashboard-view" hidden>
+        <h2>Cohort dashboard</h2>
+        <div class="card placeholder">
+          <p>The roster of new hires and their readiness will appear here.</p>
+        </div>
+      </section>
+
+      <section id="checklist-view" hidden>
+        <h2>My checklist</h2>
+        <div class="card placeholder">
+          <p>Your onboarding tasks will appear here.</p>
+        </div>
+      </section>
+
+      <section id="no-role-view" hidden>
+        <h2>No access yet</h2>
+        <div class="card placeholder">
+          <p>Your account doesn't have a role. Ask your program coordinator to set one up.</p>
+        </div>
+      </section>
+    </main>
+  </div>
 </body>
 </html>

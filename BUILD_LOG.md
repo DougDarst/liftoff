@@ -18,12 +18,29 @@ Running notes while building with Claude Code. One or two lines per step is plen
 
 - Tested the access rules myself with curl as Priya: she sees only her own data, her attempt to make herself coordinator got a 404, and editing her own name worked. The server enforces this, not the UI.
 
+
+
 ## Day 2: frontend
 
 | Step | What I asked | What it got right | What I corrected | Time |
 |---|---|---|---|---|
-| 0 Orient | | | | |
-| 1 Login + shell | | | | |
+| 0 Orient | Read CLAUDE.md and the migrations, explain the data model and every new-hire rule, and flag anything risky. No code. | Accurate model and rule-by-rule summary; flagged 10 issues, ranked. Proved each one against a throwaway DB via the API before and after fixing. | Made it go one issue at a time: evaluate, then I choose. Picked docs-only fixes for #8 and #10, won't-fix for #9, and a private deployed password for #1. | |
+| 1 Login + shell | Step 1 prompt: login, header with name + role, route by role to placeholders, stay signed in, light/dark, phone width. | All of it on the first pass, plus re-checking the session on reload and a "no role" screen. Used `textContent` for user data. Checked it in headless Chrome (light, dark, 390px) with no console errors. | Nothing. It caught its own false alarm: the "clipped" phone screenshot was a headless-Chrome width limit, not a bug. | |
+
+**Step 0 security review: what changed** (one migration per fix; the applied ones were never edited)
+- **#2** New hires could tick off IT and manager tasks, which also cleared their own "Blocked" flag. Now they can only flag those tasks as blocked or add a note. The strict version would have stopped them reporting a blocker at all, so it chose this middle option.
+- **#3** New hires could backdate `completed_at`. Rules can't stamp a value and there's no server code, so it now has to be within ±1 day of server time.
+- **#4** New hires could edit their own `team` and `manager_name`, which show on the coordinator's roster. Now coordinator-only.
+- **#6** Every new hire could see every cohort (future dates and locations). Now only their own.
+- **#7** After a cohort move, stale progress rows stayed editable and could flag the person as blocked forever. Progress is now scoped to the current cohort, and CLAUDE.md requires queries to filter by `task.cohort`.
+- **#1** The repo is public and the seed password is in it. A stranger could create their own coordinator account and lock out the demo. Fix: a private password on the deployed instance, plus TODO.md and a CLAUDE.md instruction so I don't forget.
+- **#8, #9, #10** Documented, not changed: `week` quirks, the rollback reopening sign-up (it doesn't survive a restart), and password resets via the admin UI (a coordinator reset rule would be an account-takeover tool).
+
+**Where the AI was wrong, and how it was caught**
+- **#8:** it said a task with no `week` would drop out of the "Behind" count. Testing showed PocketBase stores it as 0, so it actually counts as pre-work. It corrected itself.
+- **#7:** testing turned up a side effect it hadn't predicted. The #2 rule was already partly blocking stale rows, because the rule's check on a task respects the tasks collection's own access rule. We made that explicit in the rules.
+- **#9:** it first overstated the risk. Testing showed `serve` re-applies every migration on startup, so a rolled-back state can't persist.
+- Its first rule test returned a 404 that looked like a pass but had hit the wrong row (an IT task). It noticed and re-ran the test on the right row.
 | 2 Checklist | | | | |
 | 3 Dashboard | | | | |
 | 4 Security check | | | | |
