@@ -84,6 +84,7 @@ Each group runs against a fresh throwaway database, so your local data is never 
 - `pb_migrations/1760600200_*` onward: rule tightenings from the security review; the latest migration touching a collection holds its current rules (summarized in `CLAUDE.md`)
 - `tests/`: API rule tests, UI smoke tests, the deploy check, and `run.sh` to run them
 - `.github/workflows/tests.yml`: runs the tests on every push
+- `docs/security-demo.md` + `tests/security-demo.sh`: a 5-minute live demo that the server, not the UI, enforces access
 - `TODO.md`: post-deployment checklist and deferred items
 - `pb_public/`: frontend (built in `PROMPTS.md`)
 - `CLAUDE.md`: project context for Claude Code
