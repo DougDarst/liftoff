@@ -74,6 +74,8 @@ Demo accounts (local password `liftoff-demo-2026`; it's public in this repo, so 
 - `elena@example.com`: blocked (waiting on GitHub access)
 - `sam@example.com`: just getting started
 
+When helping with a deploy or data reset, walk through the deploy section of `TODO.md` with the user before calling it done. The demo password must be replaced on every fresh instance.
+
 ## Conventions
 
 - Vanilla JS, ES modules not required. Keep functions small and named for what they do.
