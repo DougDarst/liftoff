@@ -65,8 +65,8 @@ Test as `coordinator@example.com`. Elena should be Blocked, Marcus Behind.
 ## 4. Security check (this is your best interview moment)
 
 ```
-Act as a security reviewer. Sign in to the API as priya@example.com using curl
-(password liftoff-demo-2026) and try to:
+Act as a security reviewer. Sign in to the local API (http://127.0.0.1:8090) as
+priya@example.com using curl (local password liftoff-demo-2026) and try to:
 1. list all users
 2. read Marcus's progress
 3. mark one of Marcus's tasks done

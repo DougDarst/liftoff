@@ -33,7 +33,7 @@ An MVP for running monthly onboarding cohorts for new software engineers: a coor
 
 ## Demo accounts
 
-All use the password `liftoff-demo-2026`.
+Locally, all use the password `liftoff-demo-2026`. That password is public (it's in this repo), so it's for **local development only**: the deployed demo uses a different, private password (see Deploy step 5).
 
 | Email | Role | Story |
 |---|---|---|
@@ -58,14 +58,17 @@ All use the password `liftoff-demo-2026`.
      It uploads the `pb_*` folders and skips `pb_data`.
    - **SFTP:** host `ftp.pockethost.io`, port `2222`, username = your PocketHost email, Ed25519 SSH key auth. Drop the folders into your instance's folder.
 4. **Restart the instance** from the PocketHost dashboard (power off, then on) so the migrations run.
-5. Visit `https://<instance>.pockethost.io` and sign in as a demo user.
+5. **Replace the public demo password right away.** The seed creates the demo accounts with `liftoff-demo-2026`, which anyone can read in this repo; with it, a stranger could sign in as the coordinator and lock out or deface the demo. In the admin UI, open `users` and set a new password on all five demo accounts. Do this after every fresh deploy or data reset.
+6. Visit `https://<instance>.pockethost.io` and sign in as a demo user with the new password.
 
-> Before sharing the link widely, change the demo password or delete the demo users in the admin UI.
+> Share the deployed password privately with each person you show the demo to, and change it afterward. Never commit it.
 
 ## What's where
 
-- `pb_migrations/1760600000_liftoff_schema.js`: collections and **access rules** (the security model)
+- `pb_migrations/1760600000_liftoff_schema.js`: collections and the original **access rules** (the security model)
 - `pb_migrations/1760600100_liftoff_seed.js`: demo cohort, tasks, users, progress
+- `pb_migrations/1760600200_*` onward: rule tightenings from the security review; the latest migration touching a collection holds its current rules (summarized in `CLAUDE.md`)
+- `TODO.md`: post-deployment checklist and deferred items
 - `pb_public/`: frontend (built in `PROMPTS.md`)
 - `CLAUDE.md`: project context for Claude Code
 - `BUILD_LOG.md`: notes on the AI-assisted build, the source of the interview story

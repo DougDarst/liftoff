@@ -67,7 +67,7 @@ The UI may hide coordinator screens from new hires for convenience, but assume a
 
 Migrations run automatically on start. To reset the demo data: stop the server, delete `pb_data/`, start again.
 
-Demo accounts (password `liftoff-demo-2026`):
+Demo accounts (local password `liftoff-demo-2026`; it's public in this repo, so the deployed instance uses a private password set in the admin UI after deploy. Never write the deployed password into any file):
 - `coordinator@example.com`: coordinator (Doug Darst)
 - `priya@example.com`: on track
 - `marcus@example.com`: behind
