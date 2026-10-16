@@ -65,6 +65,7 @@ function showApp(user) {
   $("user-name").textContent = user.name || user.email;
   $("user-role").textContent = ROLE_LABELS[user.role] || "No role";
 
+  $("main-content").classList.toggle("wide", user.role === "coordinator"); // room for the agenda grid
   $("dashboard-view").hidden = user.role !== "coordinator";
   $("checklist-view").hidden = user.role !== "new_hire";
   $("no-role-view").hidden = user.role in ROLE_LABELS;
@@ -451,6 +452,7 @@ function renderDashboard() {
   const stats = new Map(dashboard.hires.map((hire) => [hire.id, hireStats(hire)]));
   renderKpis(stats);
   renderRoster(stats);
+  renderAgenda(dashboard.cohort);
   $("dashboard-loading").hidden = true;
   $("dashboard-body").hidden = false;
   if (dashboard.openHireId) renderPanel();
@@ -509,6 +511,77 @@ function renderRoster(stats) {
       percentCell, statusCell);
     return row;
   }));
+}
+
+// ---------- Liftoff week agenda (design mockup) ----------
+
+// A static sample agenda shown under the roster: a preview of a future feature, with no data
+// or editing behind it. Keyed by cohort name; cohorts without an entry show "No agenda yet".
+// Each day: [title, time, who/what, category]. "TBD" in the third slot shows a "Speaker TBD" chip.
+const AGENDAS = {
+  "November 2026 cohort": [
+    [
+      ["Welcome & laptops", "9:00", "Program owner", "logistics"],
+      ["How we make money", "10:30", "Product", "technical"],
+      ["Architecture tour", "1:00", "Principal eng", "technical"],
+      ["Cohort dinner", "6:00", "", "social"],
+    ],
+    [
+      ["Dev environment lab", "9:00", "DevProd", "technical"],
+      ["Guided first PR", "1:00", "Buddies", "technical"],
+      ["Code review norms", "3:30", "Staff eng", "technical"],
+    ],
+    [
+      ["AI-assisted development", "9:00", "TBD", "ai"],
+      ["Testing & CI pipeline", "1:00", "Platform", "technical"],
+      ["Eng leader AMA", "4:00", "", "social"],
+    ],
+    [
+      ["Observability & on-call", "9:00", "SRE", "technical"],
+      ["Security & data handling", "1:00", "Security", "technical"],
+      ["Team deep dives", "3:00", "Each team", "technical"],
+    ],
+    [
+      ["Ship-it demos", "9:00", "Cohort", "technical"],
+      ["Feedback survey", "11:30", "10 min", "logistics"],
+      ["Send-off lunch", "12:00", "", "social"],
+    ],
+  ],
+};
+
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+function renderAgenda(cohort) {
+  const days = AGENDAS[cohort.name];
+  if (!days) {
+    $("agenda-body").replaceChildren(el("p", "agenda-empty muted", "No agenda yet for this cohort."));
+    return;
+  }
+
+  // Liftoff week is the cohort's first week, starting on its start date (a Monday).
+  const start = new Date(cohort.start_date.replace(" ", "T"));
+  const grid = el("div", "agenda-grid");
+  days.forEach((sessions, i) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
+    const day = el("section", "agenda-day");
+    const heading = el("h4", "agenda-day-name", DAY_NAMES[i]);
+    heading.append(el("span", "agenda-date", date.toLocaleDateString(undefined, { month: "short", day: "numeric" })));
+    day.append(heading);
+
+    const list = el("ul", "agenda-sessions");
+    for (const [title, time, who, category] of sessions) {
+      const item = el("li", `session cat-${category}`);
+      item.append(el("span", "session-title", title));
+      const meta = el("span", "session-meta", who && who !== "TBD" ? `${time} · ${who}` : time);
+      if (who === "TBD") meta.append(" · ", el("span", "chip tbd-chip", "Speaker TBD"));
+      item.append(meta);
+      list.append(item);
+    }
+    day.append(list);
+    grid.append(day);
+  });
+  $("agenda-body").replaceChildren(grid);
 }
 
 // ---------- side panel: one person's checklist ----------

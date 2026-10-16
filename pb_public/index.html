@@ -49,7 +49,7 @@
       </div>
     </header>
 
-    <main class="content">
+    <main id="main-content" class="content">
       <section id="dashboard-view" hidden>
         <div class="page-head dash-head">
           <div>
@@ -98,6 +98,23 @@
               <tbody id="roster-body"></tbody>
             </table>
           </div>
+
+          <!-- Mockup: a static sample agenda, not stored anywhere. See AGENDAS in app.js. -->
+          <section class="card agenda" aria-labelledby="agenda-title">
+            <div class="agenda-head">
+              <div class="agenda-title-row">
+                <h3 id="agenda-title">Liftoff week agenda</h3>
+                <span class="chip preview-chip" title="A design preview: sessions aren't editable yet">Preview</span>
+              </div>
+              <ul class="legend" aria-label="Session types">
+                <li><span class="dot cat-technical"></span>Technical</li>
+                <li><span class="dot cat-ai"></span>AI</li>
+                <li><span class="dot cat-social"></span>Social</li>
+                <li><span class="dot cat-logistics"></span>Logistics</li>
+              </ul>
+            </div>
+            <div id="agenda-body"></div>
+          </section>
         </div>
       </section>
 

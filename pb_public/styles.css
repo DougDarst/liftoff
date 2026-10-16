@@ -16,6 +16,8 @@
   --warning: #b54708;
   --warning-soft: #fffaeb;
   --neutral-soft: #f0f2f5;
+  --pink: #c11574;
+  --pink-soft: #fdf2fa;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
   --radius: 10px;
 
@@ -39,6 +41,8 @@
     --warning: #fdb022;
     --warning-soft: #352a12;
     --neutral-soft: #242830;
+    --pink: #f670c7;
+    --pink-soft: #3a1a30;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 
     color-scheme: dark;
@@ -237,6 +241,7 @@ input {
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
 }
+.content.wide { max-width: 72rem; } /* the coordinator dashboard */
 
 .placeholder {
   padding: 2rem 1.5rem;
@@ -462,6 +467,88 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .roster-blocked { background: var(--danger-soft); color: var(--danger); }
 .roster-behind { background: var(--warning-soft); color: var(--warning); }
 .roster-on_track { background: var(--success-soft); color: var(--success); }
+
+/* ---------- Liftoff week agenda (mockup) ---------- */
+
+.agenda { margin-top: 1.5rem; padding: 1.25rem; }
+
+.agenda-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.1rem;
+}
+.agenda-title-row { display: flex; align-items: center; gap: 0.6rem; }
+.agenda-head h3 { margin: 0; font-size: 1.1rem; }
+.preview-chip { background: var(--neutral-soft); color: var(--muted); }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.legend li { display: flex; align-items: center; gap: 0.4rem; }
+.dot { width: 0.6rem; height: 0.6rem; border-radius: 999px; background: var(--session-color); }
+
+/* Each category sets one color, used by the legend dot and the session's left edge. */
+.cat-technical { --session-color: var(--accent); }
+.cat-ai { --session-color: var(--pink); }
+.cat-social { --session-color: var(--success); }
+.cat-logistics { --session-color: var(--warning); }
+
+/* The full week side by side on wide screens; one day per row below that (no 4 + 1 wrap). */
+.agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem 0.75rem;
+}
+@media (max-width: 900px) {
+  .agenda-grid { grid-template-columns: 1fr; }
+}
+
+.agenda-day-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.agenda-date { font-weight: 600; text-transform: none; letter-spacing: 0; opacity: 0.8; }
+
+.agenda-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid var(--session-color);
+  border-radius: 6px;
+  background: var(--neutral-soft);
+}
+.session-title { font-size: 0.9rem; font-weight: 600; line-height: 1.3; }
+.session-meta { font-size: 0.8rem; color: var(--muted); }
+.tbd-chip { background: var(--warning-soft); color: var(--warning); padding: 0.05rem 0.45rem; }
+
+.agenda-empty { margin: 0; }
 
 /* ---------- side panel ---------- */
 

@@ -39,6 +39,16 @@
     check("November is selected", $app("dash-cohort-line").textContent.includes("November 2"));
 
     eq("KPIs: engineers / pre-work / blocked", kpis(), "4 / 55% / 1");
+
+    // Liftoff week agenda (static mockup) for November.
+    eq("agenda title", $app("agenda-title").textContent, "Liftoff week agenda");
+    eq("agenda has the five weekdays, dated from the cohort start",
+      [...app().querySelectorAll(".agenda-day-name")].map((h) => h.firstChild.textContent).join(" "), "Mon Tue Wed Thu Fri");
+    check("Monday is the cohort's start date (Nov 2)", /Nov 2\b/.test(app().querySelector(".agenda-date").textContent),
+      app().querySelector(".agenda-date").textContent);
+    eq("agenda shows 16 sessions", app().querySelectorAll(".session").length, 16);
+    check("the AI session shows a 'Speaker TBD' chip", !!app().querySelector(".session.cat-ai .tbd-chip"));
+    check("the agenda has no clickable controls (it's a mockup)", app().querySelectorAll(".agenda button, .agenda a, .agenda input").length === 0);
     eq("roster sorted Blocked, Behind, On track with % complete", roster().join(" | "),
       "Elena Ruiz 27% Blocked | Marcus Lee 18% Behind | Sam Okafor 9% Behind | Priya Shah 45% On track");
 
@@ -92,6 +102,7 @@
     pickCohort("December");
     await until(() => app().querySelector(".roster-empty"), "December roster");
     eq("empty cohort KPIs", kpis(), "0 / – / 0");
+    eq("a cohort without an agenda says so", $app("agenda-body").textContent, "No agenda yet for this cohort.");
     check("no error banners", [...app().querySelectorAll(".error")].every((e) => e.hidden));
   });
 </script>
