@@ -51,6 +51,12 @@
     check("the agenda has no clickable controls (it's a mockup)", app().querySelectorAll(".agenda button, .agenda a, .agenda input").length === 0);
     eq("roster sorted Blocked, Behind, On track with % complete", roster().join(" | "),
       "Elena Ruiz 27% Blocked | Marcus Lee 18% Behind | Sam Okafor 9% Behind | Priya Shah 45% On track");
+    eq("each roster row has an initials avatar",
+      [...app().querySelectorAll(".roster-row .avatar-circle")].map((a) => a.textContent).join(" "), "ER ML SO PS");
+    const avatarColors = [...app().querySelectorAll(".roster-row .avatar-circle")].map((a) => a.className);
+    eq("every person on the roster gets a different avatar color", new Set(avatarColors).size, avatarColors.length);
+    check("avatars are hidden from screen readers (the name is right beside them)",
+      [...app().querySelectorAll(".avatar-circle")].every((a) => a.getAttribute("aria-hidden") === "true"));
 
     openHire("Elena Ruiz");
     await until(() => visible("person-panel"), "side panel");

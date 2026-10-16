@@ -418,6 +418,7 @@ input {
   font-weight: 600;
   padding: 0.1rem 0.55rem;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .owner { border: 1px solid var(--border); color: var(--muted); }
@@ -528,6 +529,30 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .roster-row:hover { background: var(--accent-soft); }
 
 .roster-name { font-size: 1rem; text-align: left; }
+
+.roster-person { display: flex; align-items: center; gap: 0.7rem; }
+
+/* Initials avatars. Deep, saturated colors so white initials stay readable in light and dark mode. */
+.avatar-circle {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--avatar);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+/* Six clearly different hues, so any two people on the roster look distinct. */
+.avatar-color-0 { --avatar: #7c3aed; } /* violet */
+.avatar-color-1 { --avatar: #c2410c; } /* orange */
+.avatar-color-2 { --avatar: #0369a1; } /* sky */
+.avatar-color-3 { --avatar: #be185d; } /* rose */
+.avatar-color-4 { --avatar: #15803d; } /* green */
+.avatar-color-5 { --avatar: #475569; } /* slate */
 
 .roster-empty { color: var(--muted); text-align: center; padding: 2rem 1rem; }
 
@@ -749,7 +774,9 @@ body.panel-open { overflow: hidden; }
   .dash-actions, .picker, #cohort-picker, #add-hire-button { width: 100%; min-width: 0; }
   .col-team, .col-manager { display: none; }
   .roster th, .roster td { padding: 0.7rem 0.75rem; }
-  .col-percent { width: 6rem; }
+  .col-percent { width: 4.5rem; }
+  .roster-person { gap: 0.5rem; }
+  .avatar-circle { width: 1.9rem; height: 1.9rem; font-size: 0.72rem; }
   .panel { padding: 1rem; }
   .panel-task { flex-wrap: wrap; }
 }

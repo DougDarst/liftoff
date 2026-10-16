@@ -530,6 +530,34 @@ function renderKpis(stats) {
   $("kpi-blocked").textContent = String(all.filter((s) => s.status === "blocked").length);
 }
 
+// Initials avatars. Each person's color comes from a fixed palette, keyed by their name (record
+// ids are random per database, names aren't), so it's the same on every visit and every deploy.
+// It's unique within the roster: if two people would clash, the one later alphabetically takes the
+// next free color. Decorative: the name is right beside it.
+const AVATAR_COLORS = 6;
+
+function avatarColors(hires) {
+  const colors = new Map();
+  const used = new Set();
+  const key = (hire) => (hire.name || hire.email).toLowerCase();
+  for (const hire of [...hires].sort((a, b) => key(a).localeCompare(key(b)))) {
+    let hash = 0;
+    for (const ch of key(hire)) hash = (hash * 31 + ch.charCodeAt(0)) % 9973;
+    let color = hash % AVATAR_COLORS;
+    for (let tries = 0; used.has(color) && tries < AVATAR_COLORS; tries++) color = (color + 1) % AVATAR_COLORS;
+    used.add(color);
+    if (used.size === AVATAR_COLORS) used.clear(); // more people than colors: start reusing
+    colors.set(hire.id, color);
+  }
+  return colors;
+}
+
+function avatarCircle(hire, color) {
+  const circle = el("span", `avatar-circle avatar-color-${color}`, initials(hire.name || hire.email));
+  circle.setAttribute("aria-hidden", "true");
+  return circle;
+}
+
 function renderRoster(stats) {
   const hires = [...dashboard.hires].sort((a, b) =>
     ROSTER_STATUS[stats.get(a.id).status].order - ROSTER_STATUS[stats.get(b.id).status].order
@@ -544,16 +572,19 @@ function renderRoster(stats) {
     return;
   }
 
+  const colors = avatarColors(hires);
   $("roster-body").replaceChildren(...hires.map((hire) => {
     const s = stats.get(hire.id);
     const row = el("tr", "roster-row");
     row.addEventListener("click", () => openPanel(hire.id));
 
     const nameCell = el("td");
+    const person = el("div", "roster-person");
     const nameButton = el("button", "link-button roster-name", hire.name || hire.email);
     nameButton.type = "button";
     nameButton.id = `hire-${hire.id}`;
-    nameCell.append(nameButton);
+    person.append(avatarCircle(hire, colors.get(hire.id)), nameButton);
+    nameCell.append(person);
 
     const percentCell = el("td", "col-percent");
     if (dashboard.tasks.length === 0) {
