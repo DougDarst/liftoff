@@ -47,10 +47,23 @@
       </section>
 
       <section id="checklist-view" hidden>
-        <h2>My checklist</h2>
-        <div class="card placeholder">
-          <p>Your onboarding tasks will appear here.</p>
+        <div class="page-head">
+          <h2>My checklist</h2>
+          <p id="cohort-line" class="muted"></p>
         </div>
+
+        <div id="checklist-summary" class="card summary" hidden>
+          <div class="summary-row">
+            <span>Your progress</span>
+            <span id="progress-text"></span>
+          </div>
+          <div id="progress-bar" class="progress" role="progressbar" aria-label="Checklist progress" aria-valuemin="0">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <p id="checklist-error" class="error" role="alert" hidden></p>
+        <div id="checklist-body"></div>
       </section>
 
       <section id="no-role-view" hidden>

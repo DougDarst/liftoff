@@ -11,6 +11,11 @@
   --accent-soft: #eef0ff;
   --danger: #b42318;
   --danger-soft: #fef1f0;
+  --success: #067647;
+  --success-soft: #ecfdf3;
+  --warning: #b54708;
+  --warning-soft: #fffaeb;
+  --neutral-soft: #f0f2f5;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
   --radius: 10px;
 
@@ -29,6 +34,11 @@
     --accent-soft: #23264a;
     --danger: #f97066;
     --danger-soft: #3a1d1b;
+    --success: #47cd89;
+    --success-soft: #133024;
+    --warning: #fdb022;
+    --warning-soft: #352a12;
+    --neutral-soft: #242830;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 
     color-scheme: dark;
@@ -89,6 +99,24 @@ h2 { font-size: 1.35rem; margin: 0 0 1rem; }
   color: var(--accent-text);
 }
 .button.primary:hover { filter: brightness(1.08); }
+
+.button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--surface);
+}
+
+.link-button {
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+}
+.link-button:hover { text-decoration: underline; }
 
 .button:focus-visible,
 input:focus-visible {
@@ -190,6 +218,134 @@ input {
 }
 .placeholder p { margin: 0; }
 
+/* ---------- checklist ---------- */
+
+.page-head { margin-bottom: 1rem; }
+.page-head h2 { margin-bottom: 0.25rem; }
+.page-head p { margin: 0; }
+
+.summary { padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.progress {
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--neutral-soft);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.week-group { margin-bottom: 1.75rem; }
+
+.week-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.task {
+  display: flex;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.task:first-child { border-top: 0; }
+
+.task-check {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.task-check:disabled { cursor: default; }
+
+.task-body { min-width: 0; flex: 1; }
+
+.task-title {
+  display: block;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.task-check:disabled + .task-body .task-title { cursor: default; }
+.status-done .task-title { color: var(--muted); text-decoration: line-through; }
+
+.task-desc {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.925rem;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.owner,
+.chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+}
+
+.owner { border: 1px solid var(--border); color: var(--muted); }
+.owner-new_hire { border-color: var(--accent); color: var(--accent); }
+
+.chip-not_started { background: var(--neutral-soft); color: var(--muted); }
+.chip-in_progress { background: var(--warning-soft); color: var(--warning); }
+.chip-done { background: var(--success-soft); color: var(--success); }
+.chip-blocked { background: var(--danger-soft); color: var(--danger); }
+
+.task-note {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+}
+
+.flag { margin-top: 0.6rem; }
+
+.flag-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.flag-form input { flex: 1 1 14rem; padding: 0.45rem 0.65rem; }
+.flag-form .button { padding: 0.45rem 0.8rem; font-size: 0.9rem; }
+
+#checklist-error { margin: 0 0 1rem; }
+
 /* ---------- phone width ---------- */
 
 @media (max-width: 480px) {
@@ -197,4 +353,6 @@ input {
   .who { gap: 0.4rem; font-size: 0.9rem; }
   .who .button { padding: 0.4rem 0.6rem; }
   .content { padding-top: 1rem; }
+  .task { padding: 0.9rem 1rem; }
+  .summary { padding: 0.9rem 1rem; }
 }
