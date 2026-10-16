@@ -30,21 +30,29 @@ BUILD_LOG.md     running notes on the AI-assisted build. Append to it when asked
 | `tasks` | `cohort` → cohorts, title, description, `week` (0 = pre-work, 1 = Liftoff week, 4 = 30-day), `owner_type` (`new_hire` \| `manager` \| `it`), sort | The checklist template for a cohort |
 | `progress` | `user` → users, `task` → tasks, `status` (`not_started` \| `in_progress` \| `done` \| `blocked`), completed_at, note | One row per (user, task), unique index. **No row = not started.** |
 
-A new hire's completion % = their `done` progress rows ÷ number of tasks in their cohort.
+A new hire's completion % = their `done` progress rows for tasks in their **current** cohort ÷ number of tasks in that cohort.
 
-Status rules for the coordinator roster:
+Status rules for the coordinator roster (all counted only over tasks in the new hire's current cohort):
 - **Blocked:** any progress row with status `blocked`
 - **Behind:** fewer than half of week-0 tasks done
 - **On track:** everything else
 
 ## Access rules (the important part)
 
-Security is enforced by **PocketBase API rules on the server**, not by hiding things in the UI. Rules live in `pb_migrations/1760600000_liftoff_schema.js`.
+Security is enforced by **PocketBase API rules on the server**, not by hiding things in the UI. Rules were created in `pb_migrations/1760600000_liftoff_schema.js` and tightened by later migrations (`1760600200` onward); the **latest migration touching a collection** holds its current rules.
 
-- New hires can read only **their own** user record and progress rows, and only their own cohort's tasks.
-- New hires can create/update progress **only for themselves**, and can't change `user` or `task` on an existing row.
-- New hires can't change their own `role` or `cohort`.
-- Only coordinators can create users, cohorts, and tasks. There is no public sign-up.
+Coordinators can read and write everything. New hires:
+
+- **users:** can read only their own record. Can update only their own `name` (and built-in profile fields); `role`, `cohort`, `team`, and `manager_name` are coordinator-only.
+- **cohorts:** can read only their own cohort.
+- **tasks:** can read only their own cohort's tasks.
+- **progress:** can read and update only their own rows for tasks in their **current** cohort, and create rows only for themselves on those tasks. Can't change `user` or `task` on an existing row.
+  - On `new_hire`-owned tasks: any status.
+  - On `it`/`manager`-owned tasks: may only set status to `blocked` or edit the note (they can flag a problem, but can't complete the task or clear the flag).
+  - `completed_at`, if sent, must be empty or within ±1 day of server time (no backdating).
+- Only coordinators can create users, cohorts, and tasks, or delete anything. There is no public sign-up.
+
+UI consequences: show IT/manager tasks to new hires as read-only with a "flag as blocked" action; send `completed_at` (now) when marking done and `""` when un-marking; profile edits must send only `name`, never the whole record.
 
 **Never loosen a rule to make a UI feature work.** If a feature seems to need broader access, stop and explain the trade-off instead. Any change to rules goes in a **new** migration file, never by editing an applied one.
 
@@ -70,6 +78,7 @@ Demo accounts (password `liftoff-demo-2026`):
 - Vanilla JS, ES modules not required. Keep functions small and named for what they do.
 - Use `pb.authStore` for session state; show the login screen when `!pb.authStore.isValid`.
 - Use `expand` (e.g. `expand: "task"`) and `filter` in SDK calls instead of N+1 fetches.
+- Always scope progress queries to the new hire's current cohort (filter `task.cohort = "<their cohort id>"`), on both the checklist and the roster. A new hire who moved cohorts keeps their old progress rows; coordinators can still read them, and they must not count toward completion % or Blocked/Behind.
 - Escape any user-provided text before inserting into the DOM (use `textContent`, not `innerHTML`, for data).
 - Responsive down to phone width. Light and dark mode via CSS variables.
 - Show friendly error messages; log details to the console.
