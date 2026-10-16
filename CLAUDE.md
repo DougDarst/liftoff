@@ -51,6 +51,7 @@ Coordinators can read and write everything. New hires:
   - On `it`/`manager`-owned tasks: may only set status to `blocked` or edit the note (they can flag a problem, but can't complete the task or clear the flag).
   - `completed_at`, if sent, must be empty or within ±1 day of server time (no backdating).
 - Only coordinators can create users, cohorts, and tasks, or delete anything. There is no public sign-up.
+- **Rate limiting is on** (migration `1760600700`, PocketBase's defaults: 2 sign-ins per 3s per IP, among others). Keep it on. Tests switch it off only on their throwaway servers, after checking it's enabled.
 - Coordinators set a user's initial password at creation but **can't** reset passwords or change emails afterward (`users.manageRule` is unset, deliberately). Resets go through a PocketBase superuser in the admin UI (`/_/`). Don't add a manageRule without discussing the account-takeover trade-off.
 
 UI consequences: group the checklist by whatever `week` values exist (don't hard-code 0/1/4); any coordinator task form must make `week` an explicit choice with no blank default, since a blank becomes week 0 and changes everyone's Behind threshold; show IT/manager tasks to new hires as read-only with a "flag as blocked" action; send `completed_at` (now) when marking done and `""` when un-marking; profile edits must send only `name`, never the whole record.

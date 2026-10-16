@@ -596,9 +596,9 @@ async function handleLogin(event) {
     render();
   } catch (err) {
     console.error("Login failed:", err);
-    showLoginError(err.status === 400
-      ? "That email and password don't match. Try again."
-      : "Couldn't reach the server. Check your connection and try again.");
+    if (err.status === 400) showLoginError("That email and password don't match. Try again.");
+    else if (err.status === 429) showLoginError("Too many sign-in attempts. Wait a few seconds and try again.");
+    else showLoginError("Couldn't reach the server. Check your connection and try again.");
   } finally {
     setLoginBusy(false);
   }

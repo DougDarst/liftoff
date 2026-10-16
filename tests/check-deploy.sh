@@ -3,8 +3,9 @@
 #
 #   ./tests/check-deploy.sh https://<instance>.pockethost.io
 #
-# Confirms the site is up, the public demo password no longer works (see TODO.md),
-# signed-out visitors can't read any data, and the test-only pages weren't deployed.
+# Confirms the site is up, the public demo password no longer works (see TODO.md), sign-in
+# attempts are rate limited, signed-out visitors can't read any data, and the test-only pages
+# weren't deployed. (It sends a few deliberately wrong sign-ins; nothing is created or changed.)
 
 set -u
 
@@ -23,15 +24,30 @@ echo "Checking $URL"
 [ "$(code "$URL/api/health")" = "200" ] && ok "API is up" || bad "API health check failed"
 [ "$(code "$URL/")" = "200" ] && ok "app is served at /" || bad "app page didn't load"
 
+# Sign-ins are rate limited (2 per 3s per IP), so space the attempts out. A 429 proves nothing
+# about the password, so it counts as a failure to verify, not a pass.
 for email in coordinator priya marcus elena sam; do
+  sleep 2
   status="$(code -X POST "$URL/api/collections/users/auth-with-password" \
     -H "Content-Type: application/json" -d "{\"identity\":\"$email@example.com\",\"password\":\"$PUBLIC_PASSWORD\"}")"
-  if [ "$status" = "200" ]; then
-    bad "$email@example.com still accepts the PUBLIC demo password: change it in the admin UI now"
-  else
-    ok "$email@example.com rejects the public demo password"
-  fi
+  case "$status" in
+    200) bad "$email@example.com still accepts the PUBLIC demo password: change it in the admin UI now" ;;
+    400) ok "$email@example.com rejects the public demo password" ;;
+    429) bad "$email@example.com: rate limited, couldn't verify the password (run again in a minute)" ;;
+    *)   bad "$email@example.com: unexpected response $status" ;;
+  esac
 done
+
+# Rapid wrong-password attempts against a non-existent account should be throttled.
+sleep 3
+throttled=""
+for _ in 1 2 3 4 5 6; do
+  status="$(code -X POST "$URL/api/collections/users/auth-with-password" \
+    -H "Content-Type: application/json" -d '{"identity":"check-deploy@example.invalid","password":"not-a-real-password"}')"
+  [ "$status" = "429" ] && throttled=1
+done
+[ -n "$throttled" ] && ok "rapid sign-in attempts are throttled" \
+  || bad "rapid sign-in attempts are NOT throttled: check Settings > Rate limits in the admin UI"
 
 for collection in users cohorts tasks progress; do
   total="$(curl -s "$URL/api/collections/$collection/records" | jq -r '.totalItems // "error"')"

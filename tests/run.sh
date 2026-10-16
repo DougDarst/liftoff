@@ -58,20 +58,37 @@ start_server() {
   fi
   rm -rf "$TMP/data"
   # On a database with no superuser, `serve` opens the "create superuser" page in your browser.
-  # A throwaway superuser with a random password keeps test runs silent.
-  "$POCKETBASE" superuser upsert test-runner@example.com "$(openssl rand -hex 16)" \
+  # A throwaway superuser with a random password keeps test runs silent, and lets the tests
+  # read and change settings (rate limits).
+  local su_pass
+  su_pass="$(openssl rand -hex 16)"
+  "$POCKETBASE" superuser upsert test-runner@example.com "$su_pass" \
     --dir "$TMP/data" --migrationsDir pb_migrations > "$TMP/superuser.log" 2>&1 \
     || { echo "Couldn't create the test superuser:" >&2; cat "$TMP/superuser.log" >&2; exit 2; }
   "$POCKETBASE" serve --dir "$TMP/data" --migrationsDir pb_migrations --publicDir "$TMP/public" \
     --http "127.0.0.1:$PORT" > "$TMP/pocketbase.log" 2>&1 &
   PB_PID=$!
+  local ready=""
   for _ in $(seq 1 50); do
-    curl -s "$BASE/api/health" >/dev/null 2>&1 && return 0
+    curl -s "$BASE/api/health" >/dev/null 2>&1 && { ready=1; break; }
     sleep 0.2
   done
-  echo "PocketBase didn't start on port $PORT. Log:" >&2
-  cat "$TMP/pocketbase.log" >&2
-  exit 2
+  if [ -z "$ready" ]; then
+    echo "PocketBase didn't start on port $PORT. Log:" >&2
+    cat "$TMP/pocketbase.log" >&2
+    exit 2
+  fi
+  SU_TOKEN="$(curl -s -X POST "$BASE/api/collections/_superusers/auth-with-password" \
+    -H "Content-Type: application/json" \
+    -d "{\"identity\":\"test-runner@example.com\",\"password\":\"$su_pass\"}" | jq -r '.token // empty')"
+  [ -n "$SU_TOKEN" ] || { echo "Couldn't sign in as the test superuser." >&2; exit 2; }
+}
+
+# The migrations enable rate limiting (2 sign-ins per 3s per IP). Tests sign in far faster than
+# that, so they switch it off on the throwaway server. api.sh checks it's on first.
+disable_rate_limits() {
+  curl -s -o /dev/null -X PATCH "$BASE/api/settings" -H "Authorization: $SU_TOKEN" \
+    -H "Content-Type: application/json" -d '{"rateLimits":{"enabled":false}}'
 }
 
 stop_server() {
@@ -98,6 +115,7 @@ find_chrome() {
 ui_test() {
   local name="$1" user="$2" url output
   start_server
+  disable_rate_limits
   if [ -n "$user" ]; then url="$BASE/__test/login-as.html?u=$user&then=/__test/$name.test.html"
   else url="$BASE/__test/$name.test.html"; fi
 
@@ -144,7 +162,7 @@ build_public_dir
 
 if [ "$WHAT" = "all" ] || [ "$WHAT" = "api" ]; then
   start_server
-  tests/api.sh "$BASE" || FAILED=1
+  SU_TOKEN="$SU_TOKEN" tests/api.sh "$BASE" || FAILED=1
 fi
 
 if [ "$WHAT" = "all" ] || [ "$WHAT" = "ui" ]; then

@@ -99,6 +99,29 @@ first_id() {
 
 section() { echo; echo "$1"; }
 
+echo "API rule tests against $BASE"
+
+# ---------- rate limiting (must run first, before the setup sign-ins) ----------
+
+section "Rate limiting"
+SU_TOKEN="${SU_TOKEN:-}"
+if [ -z "$SU_TOKEN" ]; then
+  echo "Setup failed: SU_TOKEN not set (run via tests/run.sh)." >&2
+  exit 2
+fi
+call GET /settings "$SU_TOKEN"
+if [ "$(jq -r '.rateLimits.enabled' <<<"$BODY")" = "true" ]; then ok "migrations enable rate limiting"
+else bad "migrations enable rate limiting" "rateLimits.enabled is $(jq -c '.rateLimits.enabled' <<<"$BODY")"; fi
+limited=0
+for _ in 1 2 3 4 5 6; do
+  call POST /collections/users/auth-with-password "" '{"identity":"priya@example.com","password":"wrong-password"}'
+  [ "$CODE" = "429" ] && limited=$((limited + 1))
+done
+if [ "$limited" -gt 0 ]; then ok "rapid sign-in attempts are throttled (429)"
+else bad "rapid sign-in attempts are throttled (429)" "6 quick wrong-password attempts, none got 429"; fi
+# Switch it off so the rest of the suite can sign in quickly.
+call PATCH /settings "$SU_TOKEN" '{"rateLimits":{"enabled":false}}'
+
 # ---------- setup ----------
 
 COORD="$(login coordinator@example.com)"
@@ -125,8 +148,6 @@ row_of() { first_id progress "user = \"$1\" && task = \"$2\""; }
 PRIYA_HANDBOOK_ROW="$(row_of "$PRIYA_ID" "$T_HANDBOOK")"
 MARCUS_HANDBOOK_ROW="$(row_of "$MARCUS_ID" "$T_HANDBOOK")"
 ELENA_SSO_ROW="$(row_of "$ELENA_ID" "$T_SSO")"
-
-echo "API rule tests against $BASE"
 
 # ---------- anonymous ----------
 
