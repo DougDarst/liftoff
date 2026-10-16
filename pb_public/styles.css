@@ -71,6 +71,8 @@ h2 { font-size: 1.35rem; margin: 0 0 1rem; }
   color: var(--accent);
 }
 
+.brand-icon { margin-right: 0.3em; }
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

@@ -6,6 +6,7 @@
   <title>Liftoff</title>
   <!-- Only this site and the pinned SDK may run scripts; no inline scripts, no other connections. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <!-- integrity: the browser refuses the SDK if the CDN ever serves different bytes. If you change
        the SDK version, recompute it:
@@ -19,8 +20,8 @@
   <!-- Login -->
   <main id="login-view" class="login" hidden>
     <form id="login-form" class="card login-card" novalidate>
-      <h1 class="brand">Liftoff</h1>
-      <p class="muted">Onboarding for new engineers. Sign in to continue.</p>
+      <h1 class="brand"><span class="brand-icon" aria-hidden="true">🚀</span>Liftoff</h1>
+      <p class="muted">Onboarding for new engineers.<br>Sign in to continue.</p>
 
       <label for="email">Email</label>
       <input id="email" name="email" type="email" autocomplete="username" required>
@@ -37,7 +38,7 @@
   <!-- Signed in -->
   <div id="app-view" hidden>
     <header class="topbar">
-      <span class="brand">Liftoff</span>
+      <span class="brand"><span class="brand-icon" aria-hidden="true">🚀</span>Liftoff</span>
       <div class="who">
         <span id="user-name" class="user-name"></span>
         <span id="user-role" class="badge"></span>
@@ -49,7 +50,7 @@
       <section id="dashboard-view" hidden>
         <div class="page-head dash-head">
           <div>
-            <h2>Cohort dashboard</h2>
+            <h2>Cohort Dashboard</h2>
             <p id="dash-cohort-line" class="muted"></p>
           </div>
           <div class="dash-actions">
@@ -98,7 +99,7 @@
 
       <section id="checklist-view" hidden>
         <div class="page-head">
-          <h2>My checklist</h2>
+          <h2>My Checklist</h2>
           <p id="cohort-line" class="muted"></p>
         </div>
 
