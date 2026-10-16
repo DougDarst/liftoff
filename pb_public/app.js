@@ -65,6 +65,7 @@ function showApp(user) {
   $("no-role-view").hidden = user.role in ROLE_LABELS;
 
   if (user.role === "new_hire") loadChecklist(user);
+  if (user.role === "coordinator") loadDashboard();
 }
 
 function render() {
@@ -141,17 +142,21 @@ function renderChecklist() {
     return;
   }
 
-  // Group by whichever weeks exist (tasks arrive sorted by week, then sort).
+  $("checklist-body").replaceChildren(...renderWeekGroups(tasks, renderTask));
+}
+
+// Group tasks by whichever weeks exist (tasks arrive sorted by week, then sort).
+// Shared by the new-hire checklist and the coordinator's side panel.
+function renderWeekGroups(tasks, renderItem) {
   const weeks = [...new Set(tasks.map((task) => task.week))];
-  const groups = weeks.map((week) => {
+  return weeks.map((week) => {
     const section = el("section", "week-group");
     section.append(el("h3", "week-title", WEEK_LABELS[week] || `Week ${week}`));
     const list = el("ul", "task-list card");
-    for (const task of tasks.filter((t) => t.week === week)) list.append(renderTask(task));
+    for (const task of tasks.filter((t) => t.week === week)) list.append(renderItem(task));
     section.append(list);
     return section;
   });
-  $("checklist-body").replaceChildren(...groups);
 }
 
 function renderProgressSummary(tasks) {
@@ -272,6 +277,281 @@ async function saveProgress(task, changes) {
   renderChecklist();
 }
 
+// ---------- coordinator dashboard ----------
+
+const ROSTER_STATUS = {
+  blocked: { label: "Blocked", order: 0 },
+  behind: { label: "Behind", order: 1 },
+  on_track: { label: "On track", order: 2 },
+};
+
+// { cohorts, cohort, hires, tasks, progress: Map<userId, Map<taskId, row>>, openHireId }
+let dashboard = null;
+
+function showDashboardError(message) {
+  $("dashboard-error").textContent = message;
+  $("dashboard-error").hidden = false;
+}
+
+function hideDashboardError() {
+  $("dashboard-error").hidden = true;
+}
+
+// Soonest cohort starting today or later; if none, the most recent one.
+function defaultCohort(cohorts) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const starts = (c) => new Date(c.start_date.replace(" ", "T"));
+  const upcoming = cohorts.filter((c) => starts(c) >= today);
+  return upcoming[0] || cohorts[cohorts.length - 1];
+}
+
+async function loadDashboard() {
+  dashboard = null;
+  hideDashboardError();
+  $("dashboard-body").hidden = true;
+  try {
+    const cohorts = await pb.collection("cohorts").getFullList({ sort: "start_date" });
+    if (cohorts.length === 0) {
+      $("dash-cohort-line").textContent = "No cohorts yet. Create one in the admin UI.";
+      $("cohort-picker").replaceChildren();
+      return;
+    }
+    const picker = $("cohort-picker");
+    picker.replaceChildren(...cohorts.map((c) => {
+      const option = el("option", "", c.name);
+      option.value = c.id;
+      return option;
+    }));
+    picker.value = defaultCohort(cohorts).id;
+    dashboard = { cohorts };
+    await loadCohort(picker.value);
+  } catch (err) {
+    if (err.isAbort) return;
+    console.error("Loading cohorts failed:", err);
+    showDashboardError("We couldn't load the dashboard. Refresh the page to try again.");
+  }
+}
+
+// Three requests per cohort: its new hires, its tasks, and all progress on its tasks.
+// Filtering progress by task.cohort leaves out stale rows from a previous cohort (see CLAUDE.md).
+async function loadCohort(cohortId) {
+  closePanel();
+  hideDashboardError();
+  const cohort = dashboard.cohorts.find((c) => c.id === cohortId);
+  $("dash-cohort-line").textContent = `Starts ${formatDate(cohort.start_date)}${cohort.location ? ` · ${cohort.location}` : ""}`;
+  try {
+    const [hires, tasks, progress] = await Promise.all([
+      pb.collection("users").getFullList({
+        filter: pb.filter('role = "new_hire" && cohort = {:cohort}', { cohort: cohortId }),
+        sort: "name",
+      }),
+      pb.collection("tasks").getFullList({
+        filter: pb.filter("cohort = {:cohort}", { cohort: cohortId }),
+        sort: "week,sort",
+      }),
+      pb.collection("progress").getFullList({
+        filter: pb.filter("task.cohort = {:cohort}", { cohort: cohortId }),
+      }),
+    ]);
+    const byUser = new Map(hires.map((hire) => [hire.id, new Map()]));
+    for (const row of progress) {
+      if (byUser.has(row.user)) byUser.get(row.user).set(row.task, row);
+    }
+    Object.assign(dashboard, { cohort, hires, tasks, progress: byUser, openHireId: null });
+    renderDashboard();
+  } catch (err) {
+    if (err.isAbort) return; // superseded by a newer cohort pick
+    console.error("Loading cohort failed:", err);
+    showDashboardError("We couldn't load that cohort. Try picking it again.");
+  }
+}
+
+function hireStatusOf(hireId, task) {
+  const row = dashboard.progress.get(hireId).get(task.id);
+  return row ? row.status : "not_started";
+}
+
+// Roster rules from CLAUDE.md: Blocked if any blocked task; Behind if fewer than half of week-0 done.
+function hireStats(hire) {
+  const { tasks } = dashboard;
+  const statuses = tasks.map((task) => hireStatusOf(hire.id, task));
+  const done = statuses.filter((s) => s === "done").length;
+  const week0 = tasks.filter((task) => task.week === 0);
+  const week0Done = week0.filter((task) => hireStatusOf(hire.id, task) === "done").length;
+
+  let status = "on_track";
+  if (statuses.includes("blocked")) status = "blocked";
+  else if (week0Done < week0.length / 2) status = "behind";
+
+  return {
+    done,
+    percent: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
+    week0Done,
+    week0Total: week0.length,
+    status,
+  };
+}
+
+function renderDashboard() {
+  const stats = new Map(dashboard.hires.map((hire) => [hire.id, hireStats(hire)]));
+  renderKpis(stats);
+  renderRoster(stats);
+  $("dashboard-body").hidden = false;
+  if (dashboard.openHireId) renderPanel();
+}
+
+function renderKpis(stats) {
+  const all = [...stats.values()];
+  const week0Possible = all.reduce((sum, s) => sum + s.week0Total, 0);
+  const week0Done = all.reduce((sum, s) => sum + s.week0Done, 0);
+
+  $("kpi-count").textContent = String(all.length);
+  $("kpi-prework").textContent = week0Possible ? `${Math.round((week0Done / week0Possible) * 100)}%` : "–";
+  $("kpi-blocked").textContent = String(all.filter((s) => s.status === "blocked").length);
+}
+
+function renderRoster(stats) {
+  const hires = [...dashboard.hires].sort((a, b) =>
+    ROSTER_STATUS[stats.get(a.id).status].order - ROSTER_STATUS[stats.get(b.id).status].order
+    || (a.name || a.email).localeCompare(b.name || b.email));
+
+  if (hires.length === 0) {
+    const row = el("tr");
+    const cell = el("td", "roster-empty", "No new hires in this cohort yet.");
+    cell.colSpan = 5;
+    row.append(cell);
+    $("roster-body").replaceChildren(row);
+    return;
+  }
+
+  $("roster-body").replaceChildren(...hires.map((hire) => {
+    const s = stats.get(hire.id);
+    const row = el("tr", "roster-row");
+    row.addEventListener("click", () => openPanel(hire.id));
+
+    const nameCell = el("td");
+    const nameButton = el("button", "link-button roster-name", hire.name || hire.email);
+    nameButton.type = "button";
+    nameButton.id = `hire-${hire.id}`;
+    nameCell.append(nameButton);
+
+    const percentCell = el("td", "col-percent");
+    const bar = el("div", "progress mini");
+    const fill = el("div", "progress-fill");
+    fill.style.width = `${s.percent}%`;
+    bar.append(fill);
+    percentCell.append(el("span", "", `${s.percent}%`), bar);
+
+    const statusCell = el("td");
+    statusCell.append(el("span", `chip roster-${s.status}`, ROSTER_STATUS[s.status].label));
+
+    row.append(nameCell, el("td", "col-team", hire.team || "–"), el("td", "col-manager", hire.manager_name || "–"),
+      percentCell, statusCell);
+    return row;
+  }));
+}
+
+// ---------- side panel: one person's checklist ----------
+
+function openPanel(hireId) {
+  dashboard.openHireId = hireId;
+  hidePanelError();
+  renderPanel();
+  $("panel-backdrop").hidden = false;
+  $("person-panel").hidden = false;
+  document.body.classList.add("panel-open");
+  $("panel-close").focus();
+}
+
+function closePanel() {
+  if (!dashboard || !dashboard.openHireId) return;
+  const returnFocus = $(`hire-${dashboard.openHireId}`);
+  dashboard.openHireId = null;
+  $("panel-backdrop").hidden = true;
+  $("person-panel").hidden = true;
+  document.body.classList.remove("panel-open");
+  if (returnFocus) returnFocus.focus();
+}
+
+function showPanelError(message) {
+  $("panel-error").textContent = message;
+  $("panel-error").hidden = false;
+}
+
+function hidePanelError() {
+  $("panel-error").hidden = true;
+}
+
+function renderPanel() {
+  const hire = dashboard.hires.find((h) => h.id === dashboard.openHireId);
+  const s = hireStats(hire);
+
+  $("panel-name").textContent = hire.name || hire.email;
+  $("panel-sub").textContent = [hire.team, hire.manager_name && `Manager: ${hire.manager_name}`]
+    .filter(Boolean).join(" · ");
+
+  const summary = el("div", "panel-summary");
+  summary.append(
+    el("span", `chip roster-${s.status}`, ROSTER_STATUS[s.status].label),
+    el("span", "muted", `${s.done} of ${dashboard.tasks.length} done`));
+  $("panel-summary").replaceChildren(summary);
+
+  $("panel-body").replaceChildren(...renderWeekGroups(dashboard.tasks, (task) => renderPanelTask(hire, task)));
+}
+
+function renderPanelTask(hire, task) {
+  const status = hireStatusOf(hire.id, task);
+  const row = dashboard.progress.get(hire.id).get(task.id);
+
+  const item = el("li", `task panel-task status-${status}`);
+  const body = el("div", "task-body");
+  body.append(el("span", "task-title", task.title));
+  const meta = el("div", "task-meta");
+  meta.append(el("span", `owner owner-${task.owner_type}`, OWNER_LABELS[task.owner_type] || task.owner_type));
+  body.append(meta);
+  if (status === "blocked" && row && row.note) body.append(el("p", "task-note", row.note));
+
+  // Coordinators can set any status, which is how IT/manager tasks get marked done and blockers cleared.
+  const select = el("select", `status-select chip-${status}`);
+  select.id = `status-${task.id}`;
+  select.setAttribute("aria-label", `Status of "${task.title}" for ${hire.name || hire.email}`);
+  for (const [value, label] of Object.entries(STATUS_LABELS)) {
+    const option = el("option", "", label);
+    option.value = value;
+    select.append(option);
+  }
+  select.value = status;
+  select.addEventListener("change", () => setHireTaskStatus(hire, task, select, status));
+
+  item.append(body, select);
+  return item;
+}
+
+async function setHireTaskStatus(hire, task, select, previous) {
+  const status = select.value;
+  const existing = dashboard.progress.get(hire.id).get(task.id);
+  if (!existing && status === "not_started") return; // no row already means not started
+
+  select.disabled = true;
+  hidePanelError();
+  const changes = { status, completed_at: status === "done" ? new Date().toISOString() : "" };
+  try {
+    const saved = existing
+      ? await pb.collection("progress").update(existing.id, changes)
+      : await pb.collection("progress").create({ user: hire.id, task: task.id, ...changes });
+    dashboard.progress.get(hire.id).set(task.id, saved);
+    renderDashboard();
+    $(`status-${task.id}`).focus(); // the panel re-rendered; keep keyboard focus in place
+  } catch (err) {
+    if (err.isAbort) return;
+    console.error("Updating task status failed:", err);
+    showPanelError("Couldn't update that task. Try again.");
+    select.value = previous;
+    select.disabled = false;
+  }
+}
+
 // ---------- login ----------
 
 function showLoginError(message) {
@@ -315,8 +595,10 @@ async function handleLogin(event) {
 }
 
 function handleSignOut() {
+  closePanel();
   pb.authStore.clear();
   checklist = null;
+  dashboard = null;
   render();
 }
 
@@ -339,6 +621,12 @@ async function refreshSession() {
 async function start() {
   $("login-form").addEventListener("submit", handleLogin);
   $("signout-button").addEventListener("click", handleSignOut);
+  $("cohort-picker").addEventListener("change", (event) => loadCohort(event.target.value));
+  $("panel-close").addEventListener("click", closePanel);
+  $("panel-backdrop").addEventListener("click", closePanel);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePanel();
+  });
   await refreshSession();
   render();
 }
