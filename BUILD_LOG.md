@@ -16,6 +16,8 @@ Running notes while building with Claude Code. One or two lines per step is plen
 - Design choice: no progress row = "not started," which keeps seed data and writes small.
 - Design choice: app-level `coordinator` role kept separate from PocketBase superusers (the admin UI owner).
 
+- Tested the access rules myself with curl as Priya: she sees only her own data, her attempt to make herself coordinator got a 404, and editing her own name worked. The server enforces this, not the UI.
+
 ## Day 2: frontend
 
 | Step | What I asked | What it got right | What I corrected | Time |
