@@ -1,0 +1,59 @@
+<!doctype html>
+<!-- Step 2: the new-hire checklist, signed in as Sam (1 of 11 done in the seed data). -->
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js"></script>
+<script src="lib.js"></script>
+<iframe id="app" src="/" style="width:1000px;height:900px"></iframe>
+<pre id="out"></pre>
+<script>
+  const taskRow = (title) => [...app().querySelectorAll("#checklist-body .task")]
+    .find((li) => li.querySelector(".task-title").textContent === title);
+  const chip = (title) => taskRow(title).querySelector(".chip").textContent;
+  const progressText = () => $app("progress-text").textContent;
+
+  run(async () => {
+    await until(() => app().querySelector("#checklist-body .task"), "checklist to load");
+
+    check("cohort line names the cohort", $app("cohort-line").textContent.startsWith("November 2026 cohort · Starts "));
+    eq("progress starts at 1 of 11", progressText(), "1 of 11 done");
+    eq("tasks grouped by week",
+      [...app().querySelectorAll(".week-title")].map((h) => `${h.textContent} (${h.nextSibling.children.length})`).join(", "),
+      "Before you arrive (5), Liftoff week (5), 30-day follow-up (1)");
+
+    const it = taskRow("SSO and GitHub access verified");
+    eq("IT task shows the IT owner badge", it.querySelector(".owner").textContent, "IT");
+    check("IT task checkbox is read-only", it.querySelector(".task-check").disabled);
+    check("IT task offers 'Flag a blocker'", !!it.querySelector(".flag .link-button"));
+    const mine = taskRow("Read the engineering handbook");
+    eq("own task shows the 'You' badge", mine.querySelector(".owner").textContent, "You");
+    check("own task checkbox is enabled", !mine.querySelector(".task-check").disabled);
+    check("own task has no flag action", !mine.querySelector(".flag"));
+
+    const handbook = "Read the engineering handbook";
+    taskRow(handbook).querySelector(".task-check").click();
+    await until(() => progressText() === "2 of 11 done", "check off a task");
+    eq("checking a task marks it done", chip(handbook), "Done");
+
+    taskRow(handbook).querySelector(".task-check").click();
+    await until(() => progressText() === "1 of 11 done", "uncheck a task");
+    eq("unchecking sets it back to not started", chip(handbook), "Not started");
+
+    const buddy = "Assign an onboarding buddy";
+    taskRow(buddy).querySelector(".flag .link-button").click();
+    setValue(taskRow(buddy).querySelector(".flag-form input"), "My manager is on leave");
+    taskRow(buddy).querySelector(".flag-form").requestSubmit();
+    await until(() => chip(buddy) === "Blocked", "flag a blocker");
+    eq("flagged task shows the note", taskRow(buddy).querySelector(".task-note").textContent, "My manager is on leave");
+    check("flag action is gone once blocked", !taskRow(buddy).querySelector(".flag"));
+    check("no error banner", !visible("checklist-error"));
+
+    // What actually reached the server (this page shares the app's sign-in).
+    const pb = new PocketBase(location.origin);
+    const rows = await pb.collection("progress").getFullList({ expand: "task" });
+    const row = (title) => rows.find((r) => r.expand.task.title === title);
+    eq("server: unchecked task is not_started", row(handbook).status, "not_started");
+    eq("server: unchecked task has completed_at cleared", row(handbook).completed_at, "");
+    eq("server: flagged task is blocked", row(buddy).status, "blocked");
+    eq("server: flagged task kept the note", row(buddy).note, "My manager is on leave");
+  });
+</script>

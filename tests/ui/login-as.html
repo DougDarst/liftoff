@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- Test-only helper: signs in a demo user, then goes to ?then=. Lives in tests/, never deployed. -->
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js"></script>
+<pre id="out"></pre>
+<script>
+  const params = new URLSearchParams(location.search);
+  const pb = new PocketBase(location.origin);
+  pb.collection("users")
+    .authWithPassword(`${params.get("u")}@example.com`, "liftoff-demo-2026")
+    .then(() => location.replace(params.get("then")))
+    .catch((err) => {
+      document.getElementById("out").textContent = `not ok - sign in as ${params.get("u")} failed (${err.status})\nDONE\n`;
+    });
+</script>

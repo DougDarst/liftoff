@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download PocketBase 0.40.5
+        run: |
+          curl -sSL -o pocketbase.zip \
+            https://github.com/pocketbase/pocketbase/releases/download/v0.40.5/pocketbase_0.40.5_linux_amd64.zip
+          unzip -q pocketbase.zip pocketbase
+          ./pocketbase --version
+
+      - name: Run API and UI tests
+        env:
+          REQUIRE_UI: "1"
+          CHROME: google-chrome
+        run: ./tests/run.sh

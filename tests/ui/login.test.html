@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- Step 1: login form, header, role routing, staying signed in, sign out. Starts signed out. -->
+<meta charset="utf-8">
+<script src="lib.js"></script>
+<iframe id="app" style="width:1000px;height:800px"></iframe>
+<pre id="out"></pre>
+<script>
+  localStorage.clear(); // start signed out (the iframe shares this origin's storage)
+
+  async function signIn(email, password) {
+    setValue($app("email"), email);
+    setValue($app("password"), password);
+    $app("login-form").requestSubmit();
+  }
+
+  run(async () => {
+    document.getElementById("app").src = "/";
+    await until(() => visible("login-view"), "login screen");
+    check("signed out: login screen is shown", visible("login-view") && !visible("app-view"));
+
+    $app("login-form").requestSubmit();
+    await until(() => visible("login-error"), "empty-form error");
+    eq("empty form asks for email and password", $app("login-error").textContent, "Enter your email and password.");
+
+    await signIn("priya@example.com", "wrong-password");
+    await until(() => $app("login-error").textContent.includes("don't match"), "wrong-password error");
+    check("wrong password shows a friendly error", visible("login-error") && visible("login-view"));
+
+    await signIn("coordinator@example.com", "liftoff-demo-2026");
+    await until(() => visible("app-view"), "signed-in view");
+    eq("header shows the user's name", $app("user-name").textContent, "Doug Darst");
+    eq("header shows the role", $app("user-role").textContent, "Coordinator");
+    check("coordinator is routed to the dashboard", visible("dashboard-view") && !visible("checklist-view"));
+
+    document.getElementById("app").contentWindow.location.reload();
+    await sleep(100);
+    await until(() => app().readyState === "complete" && visible("app-view"), "reload");
+    check("still signed in after reload", visible("app-view") && $app("user-name").textContent === "Doug Darst");
+
+    $app("signout-button").click();
+    await until(() => visible("login-view"), "login screen after sign out");
+    check("sign out returns to the login screen", !visible("app-view"));
+
+    await signIn("priya@example.com", "liftoff-demo-2026");
+    await until(() => visible("app-view"), "new hire signed in");
+    eq("new hire role badge", $app("user-role").textContent, "New hire");
+    check("new hire is routed to the checklist", visible("checklist-view") && !visible("dashboard-view"));
+  });
+</script>

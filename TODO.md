@@ -6,8 +6,8 @@ The seed creates the demo accounts with the public password `liftoff-demo-2026`.
 
 - [ ] Restart the instance (power off, then on) so all migrations run
 - [ ] In the admin UI (`https://<instance>.pockethost.io/_/`), set a new private password on all five demo accounts in `users`
-- [ ] Sign in as `coordinator@example.com` with the new password and check the roster: Priya on track, Marcus behind, Elena blocked, Sam just started
-- [ ] Try the old password `liftoff-demo-2026` and confirm it fails
+- [ ] Run `./tests/check-deploy.sh https://<instance>.pockethost.io` and confirm it passes (it checks the old password fails for all five accounts, signed-out visitors see nothing, and no test pages were deployed)
+- [ ] Sign in as `coordinator@example.com` with the new password and check the roster: Elena blocked, Marcus and Sam behind, Priya on track
 - [ ] Store the new password in your password manager, never in this repo
 
 ## After each person you show the demo to

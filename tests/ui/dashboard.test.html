@@ -1,0 +1,72 @@
+<!doctype html>
+<!-- Step 3: the coordinator dashboard and side panel, signed in as the coordinator.
+     Picks the November cohort explicitly so the test doesn't depend on today's date. -->
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js"></script>
+<script src="lib.js"></script>
+<iframe id="app" src="/" style="width:1000px;height:900px"></iframe>
+<pre id="out"></pre>
+<script>
+  const kpis = () => ["kpi-count", "kpi-prework", "kpi-blocked"].map((id) => $app(id).textContent).join(" / ");
+  const roster = () => [...app().querySelectorAll(".roster-row")].map((tr) =>
+    `${tr.querySelector(".roster-name").textContent} ${tr.querySelector(".col-percent span").textContent} ${tr.querySelector(".chip").textContent}`);
+  const openHire = (name) => [...app().querySelectorAll(".roster-name")].find((b) => b.textContent === name).click();
+  const panelTask = (title) => [...app().querySelectorAll(".panel-task")]
+    .find((li) => li.querySelector(".task-title").textContent === title);
+  const pickCohort = (prefix) => {
+    const option = [...$app("cohort-picker").options].find((o) => o.textContent.startsWith(prefix));
+    choose($app("cohort-picker"), option.value);
+  };
+
+  run(async () => {
+    await until(() => $app("cohort-picker").options.length > 0, "cohort picker");
+    pickCohort("November");
+    await until(() => visible("dashboard-body") && roster().length === 4, "November roster");
+    check("November is selected", $app("dash-cohort-line").textContent.includes("November 2"));
+
+    eq("KPIs: engineers / pre-work / blocked", kpis(), "4 / 55% / 1");
+    eq("roster sorted Blocked, Behind, On track with % complete", roster().join(" | "),
+      "Elena Ruiz 27% Blocked | Marcus Lee 18% Behind | Sam Okafor 9% Behind | Priya Shah 45% On track");
+
+    openHire("Elena Ruiz");
+    await until(() => visible("person-panel"), "side panel");
+    eq("panel names the person", $app("panel-name").textContent, "Elena Ruiz");
+    eq("panel shows team and manager", $app("panel-sub").textContent, "Platform · Manager: Sam Patel");
+    check("panel shows the blocked note",
+      panelTask("SSO and GitHub access verified").querySelector(".task-note")?.textContent === "Still waiting on GitHub org invite");
+    eq("every task has a status control", app().querySelectorAll(".panel-task select").length, 11);
+    check("focus moves into the panel", app().activeElement === $app("panel-close"));
+
+    choose(panelTask("SSO and GitHub access verified").querySelector("select"), "done");
+    await until(() => $app("kpi-blocked").textContent === "0", "clear the blocker");
+    eq("clearing the blocker updates the KPIs", kpis(), "4 / 60% / 0");
+    eq("Elena moves to On track", roster().find((r) => r.startsWith("Elena")), "Elena Ruiz 36% On track");
+    check("blocked note is gone", !app().querySelector(".panel .task-note"));
+
+    app().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await until(() => !visible("person-panel"), "Esc closes the panel");
+    check("Esc closes the panel and returns focus", app().activeElement?.textContent === "Elena Ruiz");
+
+    openHire("Sam Okafor");
+    await until(() => $app("panel-name").textContent === "Sam Okafor", "Sam's panel");
+    choose(panelTask("Assign an onboarding buddy").querySelector("select"), "done");
+    await until(() => roster().includes("Sam Okafor 18% Behind"), "mark Sam's manager task done");
+    check("coordinator can complete a manager task (creates the row)", true);
+    $app("panel-close").click();
+
+    const pb = new PocketBase(location.origin);
+    const rows = await pb.collection("progress").getFullList({
+      expand: "task,user",
+      filter: 'task.title = "SSO and GitHub access verified" || task.title = "Assign an onboarding buddy"',
+    });
+    const row = (name, title) => rows.find((r) => r.expand.user.name === name && r.expand.task.title === title);
+    eq("server: Elena's blocker is done", row("Elena Ruiz", "SSO and GitHub access verified").status, "done");
+    check("server: completed_at was stamped", !!row("Elena Ruiz", "SSO and GitHub access verified").completed_at);
+    eq("server: Sam's manager task row was created as done", row("Sam Okafor", "Assign an onboarding buddy")?.status, "done");
+
+    pickCohort("December");
+    await until(() => app().querySelector(".roster-empty"), "December roster");
+    eq("empty cohort KPIs", kpis(), "0 / – / 0");
+    check("no error banners", [...app().querySelectorAll(".error")].every((e) => e.hidden));
+  });
+</script>

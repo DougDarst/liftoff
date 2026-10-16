@@ -76,6 +76,21 @@ Demo accounts (local password `liftoff-demo-2026`; it's public in this repo, so 
 
 When helping with a deploy or data reset, walk through the deploy section of `TODO.md` with the user before calling it done. The demo password must be replaced on every fresh instance.
 
+## Testing
+
+```bash
+./tests/run.sh          # API rule tests + UI smoke tests (about 15 seconds)
+./tests/run.sh api      # just the API rule tests
+./tests/run.sh ui       # just the UI smoke tests (needs Chrome; skipped if missing)
+./tests/check-deploy.sh https://<instance>.pockethost.io   # read-only check of a live deploy
+```
+
+- **Run `./tests/run.sh` before every commit, and never commit with failures.** If a test fails, fix the code or explain why the test is wrong. Never weaken a test to make it pass.
+- Every test group runs against a brand-new database built from `pb_migrations/` on a spare port (8099), so tests never touch `pb_data/` and can run while the dev server is up. GitHub Actions runs the same script on every push.
+- `tests/api.sh` acts as each demo user over HTTP. When a rule changes or a collection gains a field, add `allow`/`deny` checks there. `deny` passes only on a genuine rule refusal (403/404, or 400 with no field errors), so a malformed test request can't masquerade as a denial.
+- `tests/ui/*.test.html` drive the real app in an iframe via headless Chrome. When a UI feature changes, update or add a flow there. The test pages live only in `tests/` and are served from a temp copy; never copy them into `pb_public/`.
+- Tests must not depend on today's date. Pick cohorts explicitly and use far-past/far-future dates.
+
 ## Conventions
 
 - Vanilla JS, ES modules not required. Keep functions small and named for what they do.
