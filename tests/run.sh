@@ -51,6 +51,11 @@ build_public_dir() {
 start_server() {
   stop_server
   rm -rf "$TMP/data"
+  # On a database with no superuser, `serve` opens the "create superuser" page in your browser.
+  # A throwaway superuser with a random password keeps test runs silent.
+  "$POCKETBASE" superuser upsert test-runner@example.com "$(openssl rand -hex 16)" \
+    --dir "$TMP/data" --migrationsDir pb_migrations > "$TMP/superuser.log" 2>&1 \
+    || { echo "Couldn't create the test superuser:" >&2; cat "$TMP/superuser.log" >&2; exit 2; }
   "$POCKETBASE" serve --dir "$TMP/data" --migrationsDir pb_migrations --publicDir "$TMP/public" \
     --http "127.0.0.1:$PORT" > "$TMP/pocketbase.log" 2>&1 &
   PB_PID=$!
