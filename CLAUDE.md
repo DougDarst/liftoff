@@ -27,7 +27,7 @@ BUILD_LOG.md     running notes on the AI-assisted build. Append to it when asked
 |---|---|---|
 | `users` (auth) | name, email, `role` (`coordinator` \| `new_hire`), `cohort` → cohorts, team, manager_name | Built-in auth collection with added fields |
 | `cohorts` | name, start_date, location | |
-| `tasks` | `cohort` → cohorts, title, description, `week` (0 = pre-work, 1 = Liftoff week, 4 = 30-day), `owner_type` (`new_hire` \| `manager` \| `it`), sort | The checklist template for a cohort |
+| `tasks` | `cohort` → cohorts, title, description, `week` (integer 0–13; by convention 0 = pre-work, 1 = Liftoff week, 4 = 30-day check-in), `owner_type` (`new_hire` \| `manager` \| `it`), sort | The checklist template for a cohort. **A missing `week` is stored as 0 (pre-work).** |
 | `progress` | `user` → users, `task` → tasks, `status` (`not_started` \| `in_progress` \| `done` \| `blocked`), completed_at, note | One row per (user, task), unique index. **No row = not started.** |
 
 A new hire's completion % = their `done` progress rows for tasks in their **current** cohort ÷ number of tasks in that cohort.
@@ -52,7 +52,7 @@ Coordinators can read and write everything. New hires:
   - `completed_at`, if sent, must be empty or within ±1 day of server time (no backdating).
 - Only coordinators can create users, cohorts, and tasks, or delete anything. There is no public sign-up.
 
-UI consequences: show IT/manager tasks to new hires as read-only with a "flag as blocked" action; send `completed_at` (now) when marking done and `""` when un-marking; profile edits must send only `name`, never the whole record.
+UI consequences: group the checklist by whatever `week` values exist (don't hard-code 0/1/4); any coordinator task form must make `week` an explicit choice with no blank default, since a blank becomes week 0 and changes everyone's Behind threshold; show IT/manager tasks to new hires as read-only with a "flag as blocked" action; send `completed_at` (now) when marking done and `""` when un-marking; profile edits must send only `name`, never the whole record.
 
 **Never loosen a rule to make a UI feature work.** If a feature seems to need broader access, stop and explain the trade-off instead. Any change to rules goes in a **new** migration file, never by editing an applied one.
 
