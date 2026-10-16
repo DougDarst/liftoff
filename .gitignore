@@ -1,0 +1,9 @@
+pb_data/
+pocketbase
+pocketbase.exe
+*.zip
+CHANGELOG.md
+LICENSE.md
+.DS_Store
+.phioconfig
+pocketbase_*/
