@@ -562,6 +562,125 @@ async function setHireTaskStatus(hire, task, select, previous) {
   }
 }
 
+// ---------- add a new hire ----------
+
+// No lookalike characters (0/O, 1/l/I, 5/S, 2/Z, 8/B) so the password can be read aloud or retyped.
+const PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyzACDEFGHJKMNPQRTUVWXY34679";
+
+// 16 random characters in groups of 4 (about 89 bits). Rejection sampling avoids modulo bias.
+function generateTempPassword() {
+  const limit = 256 - (256 % PASSWORD_ALPHABET.length);
+  const chars = [];
+  while (chars.length < 16) {
+    const [byte] = crypto.getRandomValues(new Uint8Array(1));
+    if (byte < limit) chars.push(PASSWORD_ALPHABET[byte % PASSWORD_ALPHABET.length]);
+  }
+  return chars.join("").match(/.{4}/g).join("-");
+}
+
+function showAddError(message) {
+  $("add-error").textContent = message;
+  $("add-error").hidden = false;
+}
+
+function hideAddError() {
+  $("add-error").hidden = true;
+}
+
+function showAddForm() {
+  $("add-form").reset();
+  hideAddError();
+  $("temp-password").textContent = ""; // don't leave a password sitting in the page
+  $("add-done").hidden = true;
+  $("add-form").hidden = false;
+  $("add-cohort").value = dashboard.cohort.id;
+  $("add-name").focus();
+}
+
+function openAddPanel() {
+  if (!dashboard || !dashboard.cohort) return;
+  closePanel();
+  $("add-cohort").replaceChildren(...dashboard.cohorts.map((c) => {
+    const option = el("option", "", c.name);
+    option.value = c.id;
+    return option;
+  }));
+  $("panel-backdrop").hidden = false;
+  $("add-panel").hidden = false;
+  document.body.classList.add("panel-open");
+  showAddForm();
+}
+
+function closeAddPanel() {
+  if ($("add-panel").hidden) return;
+  $("temp-password").textContent = "";
+  $("add-panel").hidden = true;
+  $("panel-backdrop").hidden = true;
+  document.body.classList.remove("panel-open");
+  $("add-hire-button").focus();
+}
+
+// Coordinators may create users (API rule); the server also refuses this for anyone else.
+async function handleAddHire(event) {
+  event.preventDefault();
+  hideAddError();
+
+  const name = $("add-name").value.trim();
+  const email = $("add-email").value.trim();
+  const cohortId = $("add-cohort").value;
+  if (!name) return showAddError("Enter their name.");
+  if (!email || !email.includes("@")) return showAddError("Enter a valid email address.");
+  if (!cohortId) return showAddError("Pick a cohort.");
+
+  const password = generateTempPassword();
+  $("add-submit").disabled = true;
+  $("add-submit").textContent = "Adding…";
+  try {
+    await pb.collection("users").create({
+      name,
+      email,
+      emailVisibility: true, // lets coordinators see the address on the roster
+      team: $("add-team").value.trim(),
+      manager_name: $("add-manager").value.trim(),
+      cohort: cohortId,
+      role: "new_hire",
+      password,
+      passwordConfirm: password,
+    }, NO_AUTO_CANCEL);
+
+    const cohort = dashboard.cohorts.find((c) => c.id === cohortId);
+    $("add-done-text").textContent = `${name} was added to ${cohort.name}. Their temporary password:`;
+    $("temp-password").textContent = password;
+    $("copy-password").textContent = "Copy";
+    $("add-form").hidden = true;
+    $("add-done").hidden = false;
+    $("copy-password").focus();
+
+    if (cohortId === dashboard.cohort.id) loadCohort(cohortId); // show them on the roster
+  } catch (err) {
+    console.error("Adding new hire failed:", err.status, err.response); // never log the password
+    const fields = (err.response && err.response.data) || {};
+    if (fields.email && fields.email.code === "validation_not_unique") showAddError("Someone with that email already exists.");
+    else if (fields.email) showAddError("Enter a valid email address.");
+    else if (Object.keys(fields).length) showAddError("Check the details and try again.");
+    else if (err.status === 400 || err.status === 403) showAddError("You don't have permission to add people.");
+    else showAddError("Couldn't add them. Check your connection and try again.");
+  } finally {
+    $("add-submit").disabled = false;
+    $("add-submit").textContent = "Add new hire";
+  }
+}
+
+async function copyTempPassword() {
+  try {
+    await navigator.clipboard.writeText($("temp-password").textContent);
+    $("copy-password").textContent = "Copied";
+  } catch (err) {
+    console.error("Copy failed:", err);
+    $("copy-password").textContent = "Select it to copy";
+  }
+}
+
 // ---------- login ----------
 
 function showLoginError(message) {
@@ -606,6 +725,7 @@ async function handleLogin(event) {
 
 function handleSignOut() {
   closePanel();
+  closeAddPanel();
   pb.authStore.clear();
   checklist = null;
   dashboard = null;
@@ -633,9 +753,15 @@ async function start() {
   $("signout-button").addEventListener("click", handleSignOut);
   $("cohort-picker").addEventListener("change", (event) => loadCohort(event.target.value));
   $("panel-close").addEventListener("click", closePanel);
-  $("panel-backdrop").addEventListener("click", closePanel);
+  $("panel-backdrop").addEventListener("click", () => { closePanel(); closeAddPanel(); });
+  $("add-hire-button").addEventListener("click", openAddPanel);
+  $("add-close").addEventListener("click", closeAddPanel);
+  $("add-finish").addEventListener("click", closeAddPanel);
+  $("add-another").addEventListener("click", showAddForm);
+  $("add-form").addEventListener("submit", handleAddHire);
+  $("copy-password").addEventListener("click", copyTempPassword);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closePanel();
+    if (event.key === "Escape") { closePanel(); closeAddPanel(); }
   });
   await refreshSession();
   render();

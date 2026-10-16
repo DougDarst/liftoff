@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Step 5: the coordinator adds a new hire and gets a one-time temporary password. -->
+<meta charset="utf-8">
+<script src="lib.js"></script>
+<iframe id="app" src="/" style="width:1000px;height:900px"></iframe>
+<pre id="out"></pre>
+<script>
+  const roster = () => [...app().querySelectorAll(".roster-row")].map((tr) =>
+    `${tr.querySelector(".roster-name").textContent} ${tr.querySelector(".col-percent span").textContent} ${tr.querySelector(".chip").textContent}`);
+  const fill = (fields) => { for (const [id, value] of Object.entries(fields)) setValue($app(id), value); };
+
+  run(async () => {
+    await until(() => $app("cohort-picker").options.length > 0, "cohort picker");
+    const november = [...$app("cohort-picker").options].find((o) => o.textContent.startsWith("November")).value;
+    choose($app("cohort-picker"), november);
+    await until(() => visible("dashboard-body") && roster().length === 4, "November roster");
+
+    $app("add-hire-button").click();
+    await until(() => visible("add-panel"), "add panel");
+    eq("cohort defaults to the one being viewed", $app("add-cohort").value, november);
+    check("focus starts on the name field", app().activeElement === $app("add-name"));
+
+    $app("add-form").requestSubmit();
+    await until(() => visible("add-error"), "empty-form error");
+    eq("empty form asks for a name", $app("add-error").textContent, "Enter their name.");
+
+    fill({ "add-name": "Jamie Rivera", "add-email": "jamie@example.com", "add-team": "Payments", "add-manager": "Alex Rivera" });
+    $app("add-form").requestSubmit();
+    await until(() => visible("add-done"), "new hire created");
+    const password = $app("temp-password").textContent;
+    check("a temporary password is shown in 4 groups of 4", /^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$/.test(password), password);
+    eq("confirmation names the person and cohort", $app("add-done-text").textContent,
+      "Jamie Rivera was added to November 2026 cohort. Their temporary password:");
+    await until(() => visible("dashboard-body") && roster().length === 5, "roster refresh");
+    check("they appear on the roster as Behind at 0%", roster().includes("Jamie Rivera 0% Behind"), roster().join(" | "));
+
+    // The password actually works, and the account is a new hire in November.
+    const res = await fetch("/api/collections/users/auth-with-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identity: "jamie@example.com", password }),
+    });
+    const body = await res.json();
+    eq("the new hire can sign in with the temporary password", res.status, 200);
+    eq("account role is new_hire", body.record && body.record.role, "new_hire");
+    eq("account is in the chosen cohort", body.record && body.record.cohort, november);
+    eq("team saved", body.record && body.record.team, "Payments");
+
+    $app("add-another").click();
+    check("'Add another' clears the password from the page", $app("temp-password").textContent === "" && visible("add-form"));
+    fill({ "add-name": "Duplicate Priya", "add-email": "priya@example.com" });
+    $app("add-form").requestSubmit();
+    await until(() => visible("add-error"), "duplicate error");
+    eq("a duplicate email gets a clear message", $app("add-error").textContent, "Someone with that email already exists.");
+
+    app().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await until(() => !visible("add-panel"), "Esc closes");
+    check("Esc closes the panel and returns focus", app().activeElement === $app("add-hire-button"));
+  });
+</script>

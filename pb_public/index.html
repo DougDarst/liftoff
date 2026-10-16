@@ -52,9 +52,12 @@
             <h2>Cohort dashboard</h2>
             <p id="dash-cohort-line" class="muted"></p>
           </div>
-          <div class="picker">
-            <label for="cohort-picker">Cohort</label>
-            <select id="cohort-picker"></select>
+          <div class="dash-actions">
+            <div class="picker">
+              <label for="cohort-picker">Cohort</label>
+              <select id="cohort-picker"></select>
+            </div>
+            <button id="add-hire-button" type="button" class="button primary">Add new hire</button>
           </div>
         </div>
 
@@ -125,6 +128,46 @@
         <div id="panel-summary"></div>
         <p id="panel-error" class="error" role="alert" hidden></p>
         <div id="panel-body"></div>
+      </aside>
+
+      <aside id="add-panel" class="panel add-panel" role="dialog" aria-modal="true" aria-labelledby="add-title" hidden>
+        <div class="panel-head">
+          <h2 id="add-title">Add new hire</h2>
+          <button id="add-close" type="button" class="button" aria-label="Close">✕</button>
+        </div>
+
+        <form id="add-form" novalidate>
+          <label for="add-name">Name</label>
+          <input id="add-name" type="text" maxlength="100" autocomplete="off" required>
+
+          <label for="add-email">Email</label>
+          <input id="add-email" type="email" autocomplete="off" required>
+
+          <label for="add-team">Team <span class="optional">(optional)</span></label>
+          <input id="add-team" type="text" maxlength="100" autocomplete="off">
+
+          <label for="add-manager">Manager <span class="optional">(optional)</span></label>
+          <input id="add-manager" type="text" maxlength="100" autocomplete="off">
+
+          <label for="add-cohort">Cohort</label>
+          <select id="add-cohort" required></select>
+
+          <p id="add-error" class="error" role="alert" hidden></p>
+          <button id="add-submit" type="submit" class="button primary add-submit">Add new hire</button>
+        </form>
+
+        <div id="add-done" hidden>
+          <p id="add-done-text" class="add-done-text"></p>
+          <div class="temp-password">
+            <code id="temp-password"></code>
+            <button id="copy-password" type="button" class="button">Copy</button>
+          </div>
+          <p class="muted add-done-note">Share it with them privately. It won't be shown again. If it's lost, reset it in the admin UI.</p>
+          <div class="add-done-actions">
+            <button id="add-another" type="button" class="button">Add another</button>
+            <button id="add-finish" type="button" class="button primary">Done</button>
+          </div>
+        </div>
       </aside>
 
       <section id="no-role-view" hidden>

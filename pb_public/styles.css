@@ -356,6 +356,13 @@ input {
   gap: 1rem;
 }
 
+.dash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
 .picker label { margin: 0 0 0.3rem; font-size: 0.8rem; color: var(--muted); }
 
 select {
@@ -497,6 +504,39 @@ body.panel-open { overflow: hidden; }
 .status-select.chip-blocked { background: var(--danger-soft); color: var(--danger); }
 .status-select:disabled { opacity: 0.6; }
 
+/* ---------- add new hire ---------- */
+
+.add-panel { width: min(26rem, 100%); }
+.add-panel .panel-head { align-items: center; }
+.add-panel .panel-head h2 { margin: 0; }
+.add-panel select { width: 100%; }
+.optional { font-weight: 400; color: var(--muted); }
+.add-submit { width: 100%; margin-top: 1.25rem; }
+#add-error { margin: 1rem 0 0; }
+
+.add-done-text { margin: 1.25rem 0 0.6rem; }
+
+.temp-password {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.temp-password code {
+  flex: 1;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.add-done-note { font-size: 0.875rem; }
+.add-done-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+
 /* ---------- phone width ---------- */
 
 @media (max-width: 480px) {
@@ -510,7 +550,7 @@ body.panel-open { overflow: hidden; }
   .kpi { padding: 0.75rem; }
   .kpi-label { font-size: 0.75rem; }
   .kpi-value { font-size: 1.4rem; }
-  .picker, #cohort-picker { width: 100%; min-width: 0; }
+  .dash-actions, .picker, #cohort-picker, #add-hire-button { width: 100%; min-width: 0; }
   .col-team, .col-manager { display: none; }
   .roster th, .roster td { padding: 0.7rem 0.75rem; }
   .col-percent { width: 6rem; }
