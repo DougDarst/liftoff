@@ -54,6 +54,20 @@ for collection in users cohorts tasks progress; do
   [ "$total" = "0" ] && ok "signed-out visitors see no $collection" || bad "signed-out visitors can see $collection ($total)"
 done
 
+# What a visitor actually gets: follow the exact ?v= links in the live page (through Cloudflare's
+# cache, no cache-busting of our own) and check each file's content matches its version hash.
+page="$(curl -s "$URL/")"
+for asset in styles.css app.js; do
+  version="$(grep -oE "${asset//./\\.}\\?v=[0-9a-f]+" <<<"$page" | head -1 | sed 's/.*?v=//')"
+  if [ -z "$version" ]; then
+    bad "the live page doesn't load $asset with a ?v= version (stale index.html?)"
+    continue
+  fi
+  served="$(curl -s "$URL/$asset?v=$version" | shasum -a 256 | cut -c1-${#version})"
+  [ "$served" = "$version" ] && ok "visitors get the current $asset (v=$version)" \
+    || bad "visitors get a stale $asset: page asks for v=$version, content is $served"
+done
+
 # PocketBase answers unknown paths with index.html (200), so check the content, not the status.
 if curl -s "$URL/__test/login-as.html" | grep -q "Test-only helper"; then
   bad "test pages are reachable on the live site"

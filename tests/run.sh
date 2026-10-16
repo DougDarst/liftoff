@@ -160,6 +160,9 @@ run_ui_tests() {
 
 # ---------- run ----------
 
+echo "Static checks"
+tests/asset-versions.sh --check || FAILED=1
+
 build_public_dir
 
 if [ "$WHAT" = "all" ] || [ "$WHAT" = "api" ]; then

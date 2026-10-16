@@ -7,14 +7,16 @@
   <!-- Only this site and the pinned SDK may run scripts; no inline scripts, no other connections. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
+  <!-- ?v= is a content hash so caches pick up changes at once; update with tests/asset-versions.sh --fix -->
+  <link rel="stylesheet" href="styles.css?v=308a5b4f00">
+
   <!-- integrity: the browser refuses the SDK if the CDN ever serves different bytes. If you change
        the SDK version, recompute it:
        curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A -->
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js"
     integrity="sha384-Pr74Q4nJqBcqXYMrsOS8tSw8t8N0Nayn7pWqFRdz9MsePI7uo55HNdxwrCcIRD8e"
     crossorigin="anonymous"></script>
-  <script src="app.js" defer></script>
+  <script src="app.js?v=978b26f25d" defer></script>
 </head>
 <body>
   <!-- Shown until the session check finishes and app.js picks a view -->

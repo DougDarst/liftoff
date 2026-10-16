@@ -90,6 +90,7 @@ When helping with a deploy or data reset, walk through the deploy section of `TO
 - Every test group runs against a brand-new database built from `pb_migrations/` on a spare port (8099), so tests never touch `pb_data/` and can run while the dev server is up. GitHub Actions runs the same script on every push.
 - `tests/api.sh` acts as each demo user over HTTP. When a rule changes or a collection gains a field, add `allow`/`deny` checks there. `deny` passes only on a genuine rule refusal (403/404, or 400 with no field errors), so a malformed test request can't masquerade as a denial.
 - `tests/ui/*.test.html` drive the real app in an iframe via headless Chrome. When a UI feature changes, update or add a flow there. The test pages live only in `tests/` and are served from a temp copy; never copy them into `pb_public/`.
+- **After changing `pb_public/app.js` or `styles.css`, run `./tests/asset-versions.sh --fix`** and commit the updated `index.html` with it. On PocketHost, Cloudflare caches CSS/JS for 4 hours, so `index.html` loads them with a content-hash `?v=`; `run.sh` fails if it's stale.
 - Tests must not depend on today's date. Pick cohorts explicitly and use far-past/far-future dates.
 
 ## Conventions
