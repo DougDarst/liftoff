@@ -284,6 +284,17 @@ count "coordinator still sees Marcus's 3 November rows" 3 \
 allow "coordinator moves Marcus back" PATCH "/collections/users/records/$MARCUS_ID" "$COORD" "{\"cohort\":\"$NOV\"}"
 count "Marcus sees his 3 rows again" 3 /collections/progress/records "$MARCUS"
 
+# ---------- own password (runs last: it ends Priya's session) ----------
+
+section "users: changing your own password"
+allow "new hire can change her own password with the current one" PATCH "/collections/users/records/$PRIYA_ID" "$PRIYA" \
+  '{"oldPassword":"liftoff-demo-2026","password":"priyas-new-password","passwordConfirm":"priyas-new-password"}'
+deny  "the change ends her existing session" GET "/collections/users/records/$PRIYA_ID" "$PRIYA"
+reject "the old password no longer signs in" POST /collections/users/auth-with-password "" \
+  '{"identity":"priya@example.com","password":"liftoff-demo-2026"}'
+allow "the new password signs in" POST /collections/users/auth-with-password "" \
+  '{"identity":"priya@example.com","password":"priyas-new-password"}'
+
 # ---------- summary ----------
 
 echo

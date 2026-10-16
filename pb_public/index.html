@@ -17,6 +17,9 @@
   <script src="app.js" defer></script>
 </head>
 <body>
+  <!-- Shown until the session check finishes and app.js picks a view -->
+  <p id="boot" class="boot muted">Loading…</p>
+
   <!-- Login -->
   <main id="login-view" class="login" hidden>
     <form id="login-form" class="card login-card" novalidate>
@@ -40,7 +43,7 @@
     <header class="topbar">
       <span class="brand"><span class="brand-icon" aria-hidden="true">🚀</span>Liftoff</span>
       <div class="who">
-        <span id="user-name" class="user-name"></span>
+        <button id="user-name" type="button" class="user-name" title="Your account"></button>
         <span id="user-role" class="badge"></span>
         <button id="signout-button" type="button" class="button">Sign out</button>
       </div>
@@ -63,6 +66,7 @@
         </div>
 
         <p id="dashboard-error" class="error" role="alert" hidden></p>
+        <p id="dashboard-loading" class="muted" hidden>Loading…</p>
 
         <div id="dashboard-body" hidden>
           <div class="kpis">
@@ -169,6 +173,33 @@
             <button id="add-finish" type="button" class="button primary">Done</button>
           </div>
         </div>
+      </aside>
+
+      <aside id="account-panel" class="panel add-panel" role="dialog" aria-modal="true" aria-labelledby="account-title" hidden>
+        <div class="panel-head">
+          <h2 id="account-title">Your account</h2>
+          <button id="account-close" type="button" class="button" aria-label="Close">✕</button>
+        </div>
+        <p id="account-email" class="muted account-email"></p>
+
+        <form id="password-form" novalidate>
+          <h3 class="form-title">Change password</h3>
+          <!-- Lets password managers pair the new password with the right account -->
+          <input id="account-username" type="email" autocomplete="username" hidden>
+
+          <label for="current-password">Current password</label>
+          <input id="current-password" type="password" autocomplete="current-password" required>
+
+          <label for="new-password">New password <span class="optional">(at least 10 characters)</span></label>
+          <input id="new-password" type="password" autocomplete="new-password" minlength="10" required>
+
+          <label for="confirm-password">Confirm new password</label>
+          <input id="confirm-password" type="password" autocomplete="new-password" required>
+
+          <p id="password-error" class="error" role="alert" hidden></p>
+          <p id="password-success" class="success" role="status" hidden>Your password has been changed.</p>
+          <button id="password-submit" type="submit" class="button primary add-submit">Change password</button>
+        </form>
       </aside>
 
       <section id="no-role-view" hidden>

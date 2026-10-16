@@ -74,11 +74,34 @@ function showApp(user) {
 }
 
 function render() {
+  $("boot").hidden = true;
   if (pb.authStore.isValid && pb.authStore.record) {
     showApp(pb.authStore.record);
+  } else if (pb.authStore.token) {
+    sessionExpired();
   } else {
     showLogin();
   }
+}
+
+// Sign-in tokens expire (after 7 days by default). PocketBase treats an expired token as "signed
+// out", so lists come back empty instead of failing, which would look like "you have no tasks".
+// Every load and save checks first and sends the user back to sign in with an explanation.
+function sessionExpired() {
+  if (pb.authStore.isValid) return false;
+  closeAllPanels();
+  pb.authStore.clear();
+  checklist = null;
+  dashboard = null;
+  showLogin();
+  showLoginError("Your session has expired. Please sign in again.");
+  return true;
+}
+
+function closeAllPanels() {
+  closePanel();
+  closeAddPanel();
+  closeAccountPanel();
 }
 
 // ---------- new-hire checklist ----------
@@ -103,6 +126,7 @@ function hideChecklistError() {
 // Three requests total: the cohort, its tasks, and this user's progress on them.
 // Progress is scoped to the current cohort (see CLAUDE.md: stale rows from an old cohort don't count).
 async function loadChecklist(user) {
+  if (sessionExpired()) return;
   checklist = null;
   hideChecklistError();
   $("checklist-summary").hidden = true;
@@ -274,6 +298,7 @@ async function toggleTask(task, checkbox) {
 
 // No progress row means "not started", so the first change creates the row.
 async function saveProgress(task, changes) {
+  if (sessionExpired()) return;
   const existing = checklist.progressByTask.get(task.id);
   const saved = existing
     ? await pb.collection("progress").update(existing.id, changes, NO_AUTO_CANCEL)
@@ -312,12 +337,16 @@ function defaultCohort(cohorts) {
 }
 
 async function loadDashboard() {
+  if (sessionExpired()) return;
   dashboard = null;
   hideDashboardError();
   $("dashboard-body").hidden = true;
+  $("dashboard-loading").hidden = false;
   try {
     const cohorts = await pb.collection("cohorts").getFullList({ sort: "start_date" });
+    $("add-hire-button").hidden = cohorts.length === 0;
     if (cohorts.length === 0) {
+      $("dashboard-loading").hidden = true;
       $("dash-cohort-line").textContent = "No cohorts yet. Create one in the admin UI.";
       $("cohort-picker").replaceChildren();
       return;
@@ -333,6 +362,7 @@ async function loadDashboard() {
     await loadCohort(picker.value);
   } catch (err) {
     if (err.isAbort) return;
+    $("dashboard-loading").hidden = true;
     console.error("Loading cohorts failed:", err);
     showDashboardError("We couldn't load the dashboard. Refresh the page to try again.");
   }
@@ -344,10 +374,12 @@ let cohortLoadSeq = 0;
 // Three requests per cohort: its new hires, its tasks, and all progress on its tasks.
 // Filtering progress by task.cohort leaves out stale rows from a previous cohort (see CLAUDE.md).
 async function loadCohort(cohortId) {
+  if (sessionExpired()) return;
   const loadId = ++cohortLoadSeq;
   closePanel();
   hideDashboardError();
   $("dashboard-body").hidden = true; // no clicking a stale roster while the new one loads
+  $("dashboard-loading").hidden = false;
   const cohort = dashboard.cohorts.find((c) => c.id === cohortId);
   $("dash-cohort-line").textContent = `Starts ${formatDate(cohort.start_date)}${cohort.location ? ` · ${cohort.location}` : ""}`;
   try {
@@ -373,6 +405,7 @@ async function loadCohort(cohortId) {
     renderDashboard();
   } catch (err) {
     if (err.isAbort) return; // superseded by a newer cohort pick
+    $("dashboard-loading").hidden = true;
     console.error("Loading cohort failed:", err);
     showDashboardError("We couldn't load that cohort. Try picking it again.");
   }
@@ -408,6 +441,7 @@ function renderDashboard() {
   const stats = new Map(dashboard.hires.map((hire) => [hire.id, hireStats(hire)]));
   renderKpis(stats);
   renderRoster(stats);
+  $("dashboard-loading").hidden = true;
   $("dashboard-body").hidden = false;
   if (dashboard.openHireId) renderPanel();
 }
@@ -448,11 +482,15 @@ function renderRoster(stats) {
     nameCell.append(nameButton);
 
     const percentCell = el("td", "col-percent");
-    const bar = el("div", "progress mini");
-    const fill = el("div", "progress-fill");
-    fill.style.width = `${s.percent}%`;
-    bar.append(fill);
-    percentCell.append(el("span", "", `${s.percent}%`), bar);
+    if (dashboard.tasks.length === 0) {
+      percentCell.append(el("span", "", "–")); // nothing to complete yet
+    } else {
+      const bar = el("div", "progress mini");
+      const fill = el("div", "progress-fill");
+      fill.style.width = `${s.percent}%`;
+      bar.append(fill);
+      percentCell.append(el("span", "", `${s.percent}%`), bar);
+    }
 
     const statusCell = el("td");
     statusCell.append(el("span", `chip roster-${s.status}`, ROSTER_STATUS[s.status].label));
@@ -508,6 +546,10 @@ function renderPanel() {
     el("span", "muted", `${s.done} of ${dashboard.tasks.length} done`));
   $("panel-summary").replaceChildren(summary);
 
+  if (dashboard.tasks.length === 0) {
+    $("panel-body").replaceChildren(el("div", "card placeholder", "This cohort has no tasks yet. Add them in the admin UI."));
+    return;
+  }
   $("panel-body").replaceChildren(...renderWeekGroups(dashboard.tasks, (task) => renderPanelTask(hire, task)));
 }
 
@@ -540,6 +582,7 @@ function renderPanelTask(hire, task) {
 }
 
 async function setHireTaskStatus(hire, task, select, previous) {
+  if (sessionExpired()) return;
   const status = select.value;
   const existing = dashboard.progress.get(hire.id).get(task.id);
   if (!existing && status === "not_started") return; // no row already means not started
@@ -623,6 +666,7 @@ function closeAddPanel() {
 // Coordinators may create users (API rule); the server also refuses this for anyone else.
 async function handleAddHire(event) {
   event.preventDefault();
+  if (sessionExpired()) return;
   hideAddError();
 
   const name = $("add-name").value.trim();
@@ -681,6 +725,90 @@ async function copyTempPassword() {
   }
 }
 
+// ---------- account: change password ----------
+
+function showPasswordError(message) {
+  $("password-success").hidden = true;
+  $("password-error").textContent = message;
+  $("password-error").hidden = false;
+}
+
+function openAccountPanel() {
+  closePanel();
+  closeAddPanel();
+  const user = pb.authStore.record;
+  $("account-email").textContent = `Signed in as ${user.email}`;
+  $("password-form").reset();
+  $("account-username").value = user.email;
+  $("password-error").hidden = true;
+  $("password-success").hidden = true;
+  $("panel-backdrop").hidden = false;
+  $("account-panel").hidden = false;
+  document.body.classList.add("panel-open");
+  $("current-password").focus();
+}
+
+function closeAccountPanel() {
+  if ($("account-panel").hidden) return;
+  $("password-form").reset();
+  $("account-panel").hidden = true;
+  $("panel-backdrop").hidden = true;
+  document.body.classList.remove("panel-open");
+  $("user-name").focus();
+}
+
+// Users may change their own password by supplying the current one (API rules + PocketBase's
+// built-in check). Changing it ends every existing session, this one included, so sign back in.
+async function handleChangePassword(event) {
+  event.preventDefault();
+  if (sessionExpired()) return;
+  $("password-error").hidden = true;
+  $("password-success").hidden = true;
+
+  const current = $("current-password").value;
+  const next = $("new-password").value;
+  const confirm = $("confirm-password").value;
+  if (!current || !next || !confirm) return showPasswordError("Fill in all three fields.");
+  if (next.length < 10) return showPasswordError("Choose a new password with at least 10 characters.");
+  if (next !== confirm) return showPasswordError("The new passwords don't match.");
+  if (next === current) return showPasswordError("Choose a password different from your current one.");
+
+  const user = pb.authStore.record;
+  $("password-submit").disabled = true;
+  $("password-submit").textContent = "Changing…";
+  try {
+    await pb.collection("users").update(user.id,
+      { oldPassword: current, password: next, passwordConfirm: confirm }, NO_AUTO_CANCEL);
+  } catch (err) {
+    console.error("Changing password failed:", err.status, err.response); // never log passwords
+    const fields = (err.response && err.response.data) || {};
+    if (fields.oldPassword) showPasswordError("Your current password is incorrect.");
+    else if (fields.password) showPasswordError("Choose a stronger password (at least 10 characters).");
+    else if (err.status === 429) showPasswordError("Too many attempts. Wait a few seconds and try again.");
+    else showPasswordError("Couldn't change your password. Check your connection and try again.");
+    $("password-submit").disabled = false;
+    $("password-submit").textContent = "Change password";
+    return;
+  }
+
+  try {
+    await pb.collection("users").authWithPassword(user.email, next);
+    $("password-form").reset();
+    $("account-username").value = user.email;
+    $("password-success").hidden = false;
+  } catch (err) {
+    // The password did change; only signing back in failed (e.g. rate limited).
+    console.error("Signing back in after a password change failed:", err.status);
+    closeAllPanels();
+    pb.authStore.clear();
+    showLogin();
+    showLoginError("Your password was changed. Sign in with your new password.");
+  } finally {
+    $("password-submit").disabled = false;
+    $("password-submit").textContent = "Change password";
+  }
+}
+
 // ---------- login ----------
 
 function showLoginError(message) {
@@ -724,8 +852,7 @@ async function handleLogin(event) {
 }
 
 function handleSignOut() {
-  closePanel();
-  closeAddPanel();
+  closeAllPanels();
   pb.authStore.clear();
   checklist = null;
   dashboard = null;
@@ -753,7 +880,10 @@ async function start() {
   $("signout-button").addEventListener("click", handleSignOut);
   $("cohort-picker").addEventListener("change", (event) => loadCohort(event.target.value));
   $("panel-close").addEventListener("click", closePanel);
-  $("panel-backdrop").addEventListener("click", () => { closePanel(); closeAddPanel(); });
+  $("panel-backdrop").addEventListener("click", closeAllPanels);
+  $("user-name").addEventListener("click", openAccountPanel);
+  $("account-close").addEventListener("click", closeAccountPanel);
+  $("password-form").addEventListener("submit", handleChangePassword);
   $("add-hire-button").addEventListener("click", openAddPanel);
   $("add-close").addEventListener("click", closeAddPanel);
   $("add-finish").addEventListener("click", closeAddPanel);
@@ -761,7 +891,7 @@ async function start() {
   $("add-form").addEventListener("submit", handleAddHire);
   $("copy-password").addEventListener("click", copyTempPassword);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") { closePanel(); closeAddPanel(); }
+    if (event.key === "Escape") closeAllPanels();
   });
   await refreshSession();
   render();

@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- Step 6: change your own password (as Sam), and expired sessions go back to sign-in. -->
+<meta charset="utf-8">
+<script src="lib.js"></script>
+<iframe id="app" src="/" style="width:1000px;height:900px"></iframe>
+<pre id="out"></pre>
+<script>
+  const OLD = "liftoff-demo-2026";
+  const NEW = "sams-new-password-1";
+  const fill = (fields) => { for (const [id, value] of Object.entries(fields)) setValue($app(id), value); };
+  const submitPassword = async (fields, label) => {
+    fill(fields);
+    $app("password-form").requestSubmit();
+    await until(() => !$app("password-submit").disabled && (visible("password-error") || visible("password-success")), label);
+  };
+  const signIn = (password) => fetch("/api/collections/users/auth-with-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identity: "sam@example.com", password }),
+  }).then((res) => res.status);
+  // A syntactically valid token whose expiry is in 1970 (the app only reads its "exp").
+  const b64 = (obj) => btoa(JSON.stringify(obj)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const EXPIRED = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ exp: 1, type: "auth" })}.sig`;
+  const expireSession = () => {
+    const auth = JSON.parse(localStorage.getItem("pocketbase_auth"));
+    localStorage.setItem("pocketbase_auth", JSON.stringify({ ...auth, token: EXPIRED }));
+  };
+
+  run(async () => {
+    await until(() => app().querySelector("#checklist-body .task"), "checklist");
+
+    $app("user-name").click();
+    await until(() => visible("account-panel"), "account panel");
+    eq("panel shows who is signed in", $app("account-email").textContent, "Signed in as sam@example.com");
+    check("focus starts on the current password", app().activeElement === $app("current-password"));
+
+    await submitPassword({}, "empty form");
+    eq("empty form", $app("password-error").textContent, "Fill in all three fields.");
+    await submitPassword({ "current-password": OLD, "new-password": "short", "confirm-password": "short" }, "short");
+    eq("too short", $app("password-error").textContent, "Choose a new password with at least 10 characters.");
+    await submitPassword({ "current-password": OLD, "new-password": NEW, "confirm-password": NEW + "x" }, "mismatch");
+    eq("mismatched confirmation", $app("password-error").textContent, "The new passwords don't match.");
+    await submitPassword({ "current-password": "not-my-password", "new-password": NEW, "confirm-password": NEW }, "wrong current");
+    eq("wrong current password (checked by the server)", $app("password-error").textContent, "Your current password is incorrect.");
+
+    await submitPassword({ "current-password": OLD, "new-password": NEW, "confirm-password": NEW }, "change");
+    check("success message shown", visible("password-success") && !visible("password-error"));
+    check("still signed in afterwards", visible("app-view") && $app("user-name").textContent === "Sam Okafor");
+    eq("the old password no longer works", await signIn(OLD), 400);
+    eq("the new password works", await signIn(NEW), 200);
+
+    app().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await until(() => !visible("account-panel"), "Esc closes");
+    check("Esc closes the panel and returns focus to the name", app().activeElement === $app("user-name"));
+
+    document.getElementById("app").contentWindow.location.reload();
+    await sleep(100);
+    await until(() => app().readyState === "complete" && app().querySelector("#checklist-body .task"), "reload");
+    check("the re-issued session survives a reload", visible("app-view"));
+
+    // Session expires while the page is open: the next save sends Sam to sign in, with a reason.
+    expireSession();
+    const box = [...app().querySelectorAll("#checklist-body .task-check")].find((c) => !c.disabled && !c.checked);
+    box.click();
+    await until(() => visible("login-view"), "expired session during use");
+    eq("expired session explains why", $app("login-error").textContent, "Your session has expired. Please sign in again.");
+
+    // Expired session on page load: same.
+    document.getElementById("app").contentWindow.location.reload();
+    expireSession();
+    await sleep(100);
+    await until(() => app().readyState === "complete" && visible("login-view"), "expired session on load");
+    check("expired session on load goes to sign-in", !visible("app-view"));
+  });
+</script>

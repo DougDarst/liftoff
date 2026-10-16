@@ -69,7 +69,9 @@ h2 { font-size: 1.35rem; margin: 0 0 1rem; }
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--accent);
+  white-space: nowrap;
 }
+.topbar .brand { flex-shrink: 0; }
 
 .brand-icon { margin-right: 0.3em; }
 
@@ -85,6 +87,7 @@ h2 { font-size: 1.35rem; margin: 0 0 1rem; }
 .button {
   font: inherit;
   font-weight: 600;
+  white-space: nowrap;
   padding: 0.5rem 0.9rem;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -161,6 +164,15 @@ input {
 .login-card p { margin: 0 0 0.5rem; }
 .login-card .button { width: 100%; margin-top: 1.25rem; padding: 0.65rem; }
 
+.success {
+  margin: 1rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.9rem;
+}
+
 .error {
   margin: 1rem 0 0;
   padding: 0.6rem 0.75rem;
@@ -190,12 +202,25 @@ input {
   min-width: 0;
 }
 
+/* The user's name doubles as the button that opens "Your account". */
 .user-name {
+  font: inherit;
   font-weight: 600;
+  min-width: 0;
+  padding: 0.25rem 0.35rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.user-name:hover { background: var(--neutral-soft); }
+.user-name:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.boot { text-align: center; margin-top: 30vh; }
 
 .badge {
   flex-shrink: 0;
@@ -537,6 +562,11 @@ body.panel-open { overflow: hidden; }
 }
 
 .add-done-note { font-size: 0.875rem; }
+
+.account-email { margin: 0.25rem 0 1.25rem; overflow-wrap: anywhere; }
+.form-title { font-size: 1rem; margin: 0; }
+#password-error, #password-success { margin: 1rem 0 0; }
+#dashboard-loading { margin: 0 0 1rem; }
 .add-done-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
 
 /* ---------- phone width ---------- */
@@ -545,6 +575,7 @@ body.panel-open { overflow: hidden; }
   .topbar { padding: 0.6rem 1rem; gap: 0.5rem; }
   .who { gap: 0.4rem; font-size: 0.9rem; }
   .who .button { padding: 0.4rem 0.6rem; }
+  .who .badge { display: none; } /* the page title already says which view this is */
   .content { padding-top: 1rem; }
   .task { padding: 0.9rem 1rem; }
   .summary { padding: 0.9rem 1rem; }

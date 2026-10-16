@@ -152,6 +152,7 @@ run_ui_tests() {
   ui_test checklist sam
   ui_test dashboard coordinator
   ui_test add-hire coordinator
+  ui_test account sam
   echo
   echo "UI: $UI_PASS passed, $UI_FAIL failed"
   [ "$UI_FAIL" -eq 0 ] || FAILED=1

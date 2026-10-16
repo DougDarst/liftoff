@@ -56,5 +56,22 @@
     app().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     await until(() => !visible("add-panel"), "Esc closes");
     check("Esc closes the panel and returns focus", app().activeElement === $app("add-hire-button"));
+
+    // Empty state: a hire in a cohort that has no tasks yet (December).
+    const december = [...$app("cohort-picker").options].find((o) => o.textContent.startsWith("December")).value;
+    choose($app("cohort-picker"), december);
+    await until(() => visible("dashboard-body") && app().querySelector(".roster-empty"), "December roster");
+    $app("add-hire-button").click();
+    await until(() => visible("add-panel"), "add panel (December)");
+    eq("cohort defaults to December", $app("add-cohort").value, december);
+    fill({ "add-name": "Dana Lee", "add-email": "dana@example.com" });
+    $app("add-form").requestSubmit();
+    await until(() => visible("add-done"), "Dana created");
+    $app("add-finish").click();
+    await until(() => visible("dashboard-body") && roster().length === 1, "December roster with Dana");
+    eq("no tasks: completion shows a dash, not 0%", roster()[0], "Dana Lee – On track");
+    [...app().querySelectorAll(".roster-name")][0].click();
+    await until(() => visible("person-panel"), "Dana's panel");
+    eq("no tasks: the panel explains", $app("panel-body").textContent, "This cohort has no tasks yet. Add them in the admin UI.");
   });
 </script>
