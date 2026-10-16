@@ -6,7 +6,8 @@ The seed creates the demo accounts with the public password `liftoff-demo-2026`.
 
 - [ ] Restart the instance (power off, then on) so all migrations run
 - [ ] In the admin UI (`https://<instance>.pockethost.io/_/`), set a new private password on all five demo accounts in `users`
-- [ ] In the admin UI, open **Settings → Application → Trusted proxy** (first deploy only). Rate limiting is on (migration `1760600700`), but behind PocketHost's proxy PocketBase may see every visitor as the same IP, so everyone would share one sign-in limit. If the admin UI shows a proxy warning, set the header it suggests (usually `X-Forwarded-For` or `X-Real-IP`). Not yet confirmed for PocketHost.
+- [ ] In the admin UI, open **Settings → Application → IP proxy headers** (⚠️ until set). PocketHost runs behind Cloudflare, so without this every visitor appears as `172.17.0.1` and shares one sign-in limit. Set **Trusted IP proxy headers** to `CF-Connecting-IP` (not `X-Forwarded-For`, which visitors can fake), leave **IP priority** on "Use rightmost IP", save, and check **Resolved user IP** now shows your real IP. Confirmed on `liftoff-mvp` (2026-10-16): spoofed `CF-Connecting-IP` requests are blocked by Cloudflare (error 1000), and faked `X-Forwarded-For` is ignored by the rate limit.
+- [ ] Same screen: set **Application URL** to `https://<instance>.pockethost.io` (it defaults to `http://localhost:8090`; PocketBase uses it to build links).
 - [ ] Run `./tests/check-deploy.sh https://<instance>.pockethost.io` and confirm it passes (it checks the old password fails for all five accounts, sign-ins are throttled, signed-out visitors see nothing, and no test pages were deployed)
 - [ ] Sign in as `coordinator@example.com` with the new password and check the roster: Elena blocked, Marcus and Sam behind, Priya on track
 - [ ] Store the new password in your password manager, never in this repo

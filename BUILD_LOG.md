@@ -64,8 +64,14 @@ Running notes while building with Claude Code. One or two lines per step is plen
 
 ## Day 3: deploy
 
-- Live URL:
-- Surprises:
+- **Live URL:** https://liftoff-mvp.pockethost.io (deployed 2026-10-16; demo passwords are private, not the repo's)
+- **How:** uploaded `pb_migrations/` and `pb_public/` over SFTP (no Node needed, so no `phio`), restarted so the migrations ran, replaced all five demo passwords in the admin UI, then `tests/check-deploy.sh` passed 13 of 13 and my browser smoke test passed as each demo user.
+- **Surprises:**
+  - **SSH key name.** I saved the key as `~/.ssh/pockethost`, so SFTP's default lookup never tried it ("Permission denied"). The AI checked the key, passphrase, and agent before guessing, then pointed SFTP at the file.
+  - **PocketHost puts its own files in the instance** (a defaults migration and two hooks). We listed the folders before uploading and left those alone.
+  - **Cloudflare in front of PocketHost.** Without configuration, PocketBase saw every visitor as `172.17.0.1`, so the whole internet would share one sign-in limit. I set the trusted header to `CF-Connecting-IP`. The AI then tested spoofing on the live site: a faked `CF-Connecting-IP` is blocked by Cloudflare itself (error 1000), and a faked `X-Forwarded-For` is ignored by the rate limit. Its first spoof test returned 403s instead of the expected 429s, and it checked who sent them before drawing a conclusion.
+  - **Admin UI details:** the password field hides behind a "change password" switch, and Application URL defaults to `http://localhost:8090`.
+  - **The December surprise.** While listing local-vs-hosted differences, the AI spotted that from Nov 2 the dashboard would open on the empty December cohort. It's fixed now: the dashboard defaults to a cohort with new hires, with date-fixed tests that fail under the old rule. The fix went live by re-uploading `app.js`; static files update without a restart.
 
 ## Story draft (STAR)
 

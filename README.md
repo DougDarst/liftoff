@@ -69,9 +69,13 @@ Each group runs against a fresh throwaway database, so your local data is never 
      phio deploy
      ```
      It uploads the `pb_*` folders and skips `pb_data`.
-   - **SFTP:** host `ftp.pockethost.io`, port `2222`, username = your PocketHost email, Ed25519 SSH key auth. Drop the folders into your instance's folder.
-4. **Restart the instance** from the PocketHost dashboard (power off, then on) so the migrations run.
-5. **Replace the public demo password right away.** The seed creates the demo accounts with `liftoff-demo-2026`, which anyone can read in this repo; with it, a stranger could sign in as the coordinator and lock out or deface the demo. In the admin UI, open `users` and set a new password on all five demo accounts. Do this after every fresh deploy or data reset.
+   - **SFTP** (no installs on a Mac): host `ftp.pockethost.io`, port `2222`, username = your PocketHost email, Ed25519 SSH key auth. Add the public key in PocketHost first. If you saved the key under a custom name, point at it:
+     ```bash
+     sftp -P 2222 -i ~/.ssh/<key> -o IdentitiesOnly=yes <your-pockethost-email>@ftp.pockethost.io
+     ```
+     Your instance is a folder (`<instance>/`) containing `pb_migrations/`, `pb_public/`, `pb_hooks/`, and `pb_data/`. `put` the files from this repo's `pb_migrations/` and `pb_public/` into the matching folders. **Leave PocketHost's own files alone** (`pb_migrations/1699198734_pockethost_defaults.js` and everything in `pb_hooks/`) and never upload `pb_data/`.
+4. **Restart the instance** from the PocketHost dashboard (power off, then on) so the migrations run. (Changes to `pb_public/` alone go live immediately, no restart needed.)
+5. **Replace the public demo password right away.** The seed creates the demo accounts with `liftoff-demo-2026`, which anyone can read in this repo; with it, a stranger could sign in as the coordinator and lock out or deface the demo. In the admin UI, open `users`, and for each of the five demo accounts switch on **change password**, enter the new one twice, and save. Do this after every fresh deploy or data reset. While in the admin UI, also do the first-deploy settings in `TODO.md` (IP proxy header and Application URL).
 6. Run `./tests/check-deploy.sh https://<instance>.pockethost.io`. It's read-only and confirms the public password is rejected, signed-out visitors see nothing, and no test pages were deployed.
 7. Visit `https://<instance>.pockethost.io` and sign in as a demo user with the new password.
 
