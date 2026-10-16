@@ -55,5 +55,21 @@
     eq("server: unchecked task has completed_at cleared", row(handbook).completed_at, "");
     eq("server: flagged task is blocked", row(buddy).status, "blocked");
     eq("server: flagged task kept the note", row(buddy).note, "My manager is on leave");
+
+    // Two quick ticks: both saves are creates to the same URL, and the SDK must not cancel the first.
+    const training = "Complete security awareness training";
+    const lab = "Dev environment lab: run the app locally";
+    taskRow(training).querySelector(".task-check").click();
+    taskRow(lab).querySelector(".task-check").click();
+    await until(() => progressText() === "3 of 11 done", "two quick ticks to both save");
+    await sleep(300);
+    check("two quick ticks: no error banner", !visible("checklist-error"));
+    const after = await pb.collection("progress").getFullList({ expand: "task" });
+    const statusOn = (title) => after.find((r) => r.expand.task.title === title)?.status;
+    check("two quick ticks: both saved on the server", statusOn(training) === "done" && statusOn(lab) === "done",
+      `${statusOn(training)}, ${statusOn(lab)}`);
+    taskRow(lab).querySelector(".task-check").click();
+    await until(() => progressText() === "2 of 11 done", "untick after quick ticks");
+    check("screen and server stayed in sync (untick works)", !visible("checklist-error"));
   });
 </script>

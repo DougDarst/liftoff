@@ -29,6 +29,11 @@ const STATUS_LABELS = {
 
 const $ = (id) => document.getElementById(id);
 
+// The SDK cancels a pending request when another one to the same method + URL starts. That's
+// right for reloading a list, but wrong for saves: every progress create shares one URL, so a
+// second quick tick would cancel the first (after it already reached the server). Saves opt out.
+const NO_AUTO_CANCEL = { requestKey: null };
+
 // Create an element with an optional class and text. Text always goes in via textContent.
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -271,8 +276,8 @@ async function toggleTask(task, checkbox) {
 async function saveProgress(task, changes) {
   const existing = checklist.progressByTask.get(task.id);
   const saved = existing
-    ? await pb.collection("progress").update(existing.id, changes)
-    : await pb.collection("progress").create({ user: checklist.user.id, task: task.id, ...changes });
+    ? await pb.collection("progress").update(existing.id, changes, NO_AUTO_CANCEL)
+    : await pb.collection("progress").create({ user: checklist.user.id, task: task.id, ...changes }, NO_AUTO_CANCEL);
   checklist.progressByTask.set(task.id, saved);
   renderChecklist();
 }
@@ -544,13 +549,12 @@ async function setHireTaskStatus(hire, task, select, previous) {
   const changes = { status, completed_at: status === "done" ? new Date().toISOString() : "" };
   try {
     const saved = existing
-      ? await pb.collection("progress").update(existing.id, changes)
-      : await pb.collection("progress").create({ user: hire.id, task: task.id, ...changes });
+      ? await pb.collection("progress").update(existing.id, changes, NO_AUTO_CANCEL)
+      : await pb.collection("progress").create({ user: hire.id, task: task.id, ...changes }, NO_AUTO_CANCEL);
     dashboard.progress.get(hire.id).set(task.id, saved);
     renderDashboard();
     $(`status-${task.id}`).focus(); // the panel re-rendered; keep keyboard focus in place
   } catch (err) {
-    if (err.isAbort) return;
     console.error("Updating task status failed:", err);
     showPanelError("Couldn't update that task. Try again.");
     select.value = previous;

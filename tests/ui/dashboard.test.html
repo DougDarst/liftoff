@@ -64,6 +64,17 @@
     check("server: completed_at was stamped", !!row("Elena Ruiz", "SSO and GitHub access verified").completed_at);
     eq("server: Sam's manager task row was created as done", row("Sam Okafor", "Assign an onboarding buddy")?.status, "done");
 
+    // Two quick status changes in the panel: both create rows via the same URL; neither may be cancelled.
+    openHire("Marcus Lee");
+    await until(() => $app("panel-name").textContent === "Marcus Lee", "Marcus's panel");
+    choose(panelTask("Open your first PR (guided)").querySelector("select"), "done");
+    choose(panelTask("Code review norms session").querySelector("select"), "done");
+    await until(() => roster().includes("Marcus Lee 36% Behind"), "two quick panel changes to both save");
+    await sleep(300);
+    check("two quick panel changes: no error and no stuck controls",
+      $app("panel-error").hidden && [...app().querySelectorAll(".panel-task select")].every((s) => !s.disabled));
+    $app("panel-close").click();
+
     pickCohort("December");
     await until(() => app().querySelector(".roster-empty"), "December roster");
     eq("empty cohort KPIs", kpis(), "0 / – / 0");
