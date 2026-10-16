@@ -20,6 +20,20 @@
 
   run(async () => {
     await until(() => $app("cohort-picker").options.length > 0, "cohort picker");
+
+    // Which cohort the dashboard opens on, checked on fixed dates (never today's date).
+    const pick = document.getElementById("app").contentWindow.defaultCohort;
+    const nov = { id: "nov", start_date: "2026-11-02 16:00:00.000Z" };
+    const dec = { id: "dec", start_date: "2026-12-07 16:00:00.000Z" };
+    const on = (date, staffed) => pick([nov, dec], new Set(staffed), new Date(date)).id;
+    eq("default cohort before Nov 2: November (upcoming, has hires)", on("2026-10-16T12:00", ["nov"]), "nov");
+    eq("default cohort after Nov 2, December empty: stays on November", on("2026-11-10T12:00", ["nov"]), "nov");
+    eq("default cohort after Nov 2, December has hires: December", on("2026-11-10T12:00", ["nov", "dec"]), "dec");
+    eq("default cohort after Dec 7, December empty: November", on("2026-12-20T12:00", ["nov"]), "nov");
+    eq("default cohort with no hires anywhere: soonest upcoming", on("2026-11-10T12:00", []), "dec");
+    eq("default cohort with no hires, all past: the latest", on("2027-01-10T12:00", []), "dec");
+    check("the live dashboard opened on November", $app("cohort-picker").selectedOptions[0].textContent.startsWith("November"));
+
     pickCohort("November");
     await until(() => visible("dashboard-body") && roster().length === 4, "November roster");
     check("November is selected", $app("dash-cohort-line").textContent.includes("November 2"));

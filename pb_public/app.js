@@ -327,13 +327,20 @@ function hideDashboardError() {
   $("dashboard-error").hidden = true;
 }
 
-// Soonest cohort starting today or later; if none, the most recent one.
-function defaultCohort(cohorts) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// Which cohort the dashboard opens on (cohorts sorted by start date). Prefer cohorts that have
+// new hires, so an empty next cohort doesn't hide the one people are actually in:
+//   1. the soonest cohort starting today or later that has new hires
+//   2. else the most recent earlier cohort that has new hires
+//   3. else the soonest upcoming cohort, else the latest one
+// `today` is a parameter so the tests can check behaviour on any date.
+function defaultCohort(cohorts, cohortsWithHires, today = new Date()) {
+  const midnight = new Date(today);
+  midnight.setHours(0, 0, 0, 0);
   const starts = (c) => new Date(c.start_date.replace(" ", "T"));
-  const upcoming = cohorts.filter((c) => starts(c) >= today);
-  return upcoming[0] || cohorts[cohorts.length - 1];
+  const upcoming = cohorts.filter((c) => starts(c) >= midnight);
+  const earlier = cohorts.filter((c) => starts(c) < midnight);
+  const staffed = (list) => list.filter((c) => cohortsWithHires.has(c.id));
+  return staffed(upcoming)[0] || staffed(earlier).at(-1) || upcoming[0] || cohorts.at(-1);
 }
 
 async function loadDashboard() {
@@ -343,7 +350,10 @@ async function loadDashboard() {
   $("dashboard-body").hidden = true;
   $("dashboard-loading").hidden = false;
   try {
-    const cohorts = await pb.collection("cohorts").getFullList({ sort: "start_date" });
+    const [cohorts, hires] = await Promise.all([
+      pb.collection("cohorts").getFullList({ sort: "start_date" }),
+      pb.collection("users").getFullList({ filter: 'role = "new_hire"', fields: "cohort" }),
+    ]);
     $("add-hire-button").hidden = cohorts.length === 0;
     if (cohorts.length === 0) {
       $("dashboard-loading").hidden = true;
@@ -357,7 +367,7 @@ async function loadDashboard() {
       option.value = c.id;
       return option;
     }));
-    picker.value = defaultCohort(cohorts).id;
+    picker.value = defaultCohort(cohorts, new Set(hires.map((h) => h.cohort))).id;
     dashboard = { cohorts };
     await loadCohort(picker.value);
   } catch (err) {
