@@ -333,11 +333,16 @@ async function loadDashboard() {
   }
 }
 
+// Bumped on every cohort load so a slow, superseded response can't overwrite a newer one.
+let cohortLoadSeq = 0;
+
 // Three requests per cohort: its new hires, its tasks, and all progress on its tasks.
 // Filtering progress by task.cohort leaves out stale rows from a previous cohort (see CLAUDE.md).
 async function loadCohort(cohortId) {
+  const loadId = ++cohortLoadSeq;
   closePanel();
   hideDashboardError();
+  $("dashboard-body").hidden = true; // no clicking a stale roster while the new one loads
   const cohort = dashboard.cohorts.find((c) => c.id === cohortId);
   $("dash-cohort-line").textContent = `Starts ${formatDate(cohort.start_date)}${cohort.location ? ` · ${cohort.location}` : ""}`;
   try {
@@ -354,6 +359,7 @@ async function loadCohort(cohortId) {
         filter: pb.filter("task.cohort = {:cohort}", { cohort: cohortId }),
       }),
     ]);
+    if (loadId !== cohortLoadSeq) return; // a newer cohort pick superseded this load
     const byUser = new Map(hires.map((hire) => [hire.id, new Map()]));
     for (const row of progress) {
       if (byUser.has(row.user)) byUser.get(row.user).set(row.task, row);
