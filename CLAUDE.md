@@ -8,9 +8,9 @@ This is a portfolio/demo project. Keep it small, readable, and working. Favor pl
 
 - **Backend:** PocketBase v0.40.x (single Go binary: SQLite + auth + REST API + admin UI). No custom server code.
 - **Frontend:** static HTML/CSS/vanilla JS in `pb_public/`, served by PocketBase at `/`.
-- **SDK:** PocketBase JS SDK from CDN: `https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js`. Create the client with `new PocketBase(location.origin)` so the same code works locally and on PocketHost.
+- **SDK:** PocketBase JS SDK from CDN: `https://cdn.jsdelivr.net/npm/pocketbase@0.28.1/dist/pocketbase.umd.js`. Create the client with `new PocketBase(location.origin)` so the same code works locally and when deployed.
 - **No build step.** No npm, no bundler, no framework. One `index.html`, one `app.js`, one `styles.css` is the target.
-- **Hosting:** PocketHost (`<instance>.pockethost.io`).
+- **Hosting:** self-hosted on a Linux server: PocketBase as a systemd service bound to localhost, with Caddy in front for HTTPS. See the README's Deploy section and `deploy/`.
 
 ## Layout
 
@@ -83,15 +83,23 @@ When helping with a deploy or data reset, walk through the deploy section of `TO
 ./tests/run.sh          # API rule tests + UI smoke tests (about 15 seconds)
 ./tests/run.sh api      # just the API rule tests
 ./tests/run.sh ui       # just the UI smoke tests (needs Chrome; skipped if missing)
-./tests/check-deploy.sh https://<instance>.pockethost.io   # read-only check of a live deploy
+./tests/check-deploy.sh https://liftoff.example.com   # read-only check of a live deploy
 ```
 
 - **Run `./tests/run.sh` before every commit, and never commit with failures.** If a test fails, fix the code or explain why the test is wrong. Never weaken a test to make it pass.
 - Every test group runs against a brand-new database built from `pb_migrations/` on a spare port (8099), so tests never touch `pb_data/` and can run while the dev server is up. GitHub Actions runs the same script on every push.
 - `tests/api.sh` acts as each demo user over HTTP. When a rule changes or a collection gains a field, add `allow`/`deny` checks there. `deny` passes only on a genuine rule refusal (403/404, or 400 with no field errors), so a malformed test request can't masquerade as a denial.
 - `tests/ui/*.test.html` drive the real app in an iframe via headless Chrome. When a UI feature changes, update or add a flow there. The test pages live only in `tests/` and are served from a temp copy; never copy them into `pb_public/`.
-- **After changing `pb_public/app.js` or `styles.css`, run `./tests/asset-versions.sh --fix`** and commit the updated `index.html` with it. On PocketHost, Cloudflare caches CSS/JS for 4 hours, so `index.html` loads them with a content-hash `?v=`; `run.sh` fails if it's stale.
+- **After changing `pb_public/app.js` or `styles.css`, run `./tests/asset-versions.sh --fix`** and commit the updated `index.html` with it. Browsers (and any CDN in front of the site) can cache CSS/JS, so `index.html` loads them with a content-hash `?v=`; `run.sh` fails if it's stale.
 - Tests must not depend on today's date. Pick cohorts explicitly and use far-past/far-future dates.
+
+## Deployment
+
+- Self-hosted; the steps are in the README's Deploy section. A deploy uploads `pb_public/` and `pb_migrations/` and restarts the service.
+- **Deploy only when the user asks.** Never deploy as a side effect of other work.
+- **Never upload, overwrite, or delete `pb_data/` on the server.** It holds the live data; the local `pb_data/` is for development only.
+- **Keep server addresses, domains, and credentials out of the repo.** Use placeholders (`you@your-server`, `liftoff.example.com`) in docs.
+- PocketBase must stay reachable only through Caddy (bound to `127.0.0.1`). The trusted proxy header (`X-Forwarded-For`, rightmost IP) is safe only because of that.
 
 ## Conventions
 

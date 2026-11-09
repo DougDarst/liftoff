@@ -77,6 +77,16 @@ Running notes while building with Claude Code. One or two lines per step is plen
   - **Cloudflare cached the old CSS and JS.** After the agenda deploy, the live dashboard showed the agenda as an unstyled bullet list, while local looked fine. Cloudflare caches `styles.css` and `app.js` for 4 hours but not `index.html`, so visitors got new HTML with old styling and script. The AI's deploy check had passed because it added its own cache-busting `?v=` to every request, which proved the server had the right files, not that visitors got them. It owned that, then fixed both halves: `index.html` now loads the files with a content-hash `?v=` (kept current by `tests/asset-versions.sh`, which the tests enforce), and `check-deploy.sh` now follows the live page's own links through the cache. The new check failed on the broken site before the fix and passed after.
   - **The December surprise.** While listing local-vs-hosted differences, the AI spotted that from Nov 2 the dashboard would open on the empty December cohort. It's fixed now: the dashboard defaults to a cohort with new hires, with date-fixed tests that fail under the old rule. The fix went live by re-uploading `app.js`; static files update without a restart.
 
+## Day 4: moved off PocketHost (2026-11-09)
+
+- **Why:** PocketHost charges per instance. I moved Liftoff to the same small Linux server that hosts my other projects, so one flat monthly cost covers all of them. The Day 3 PocketHost deploy above is kept as history.
+- **How:** PocketBase 0.40.5 runs as a systemd service bound to `127.0.0.1`, with Caddy in front for automatic HTTPS (steps in the README; example configs in `deploy/`). I started fresh from the migrations rather than moving PocketHost's data, since the seed rebuilds the demo cohort. I created the superuser before the first start, uploaded `pb_migrations/` and `pb_public/` with rsync, then replaced all five demo passwords.
+- **What changed from PocketHost:**
+  - **Proxy header.** There's no Cloudflare proxy in front now, so `CF-Connecting-IP` would never arrive and everyone would share one sign-in limit. The trusted header is now `X-Forwarded-For` (rightmost IP). That's safe only because PocketBase is reachable solely through Caddy, and Caddy replaces any `X-Forwarded-For` a visitor sends with their real IP.
+  - **No PocketHost files** (defaults migration, hooks) to work around.
+- **Checks:** `tests/check-deploy.sh` passed 15 of 15. A manual spoof test (four wrong sign-ins, each with a different fake `X-Forwarded-For`) was still throttled as one visitor. The coordinator roster looked right: Elena blocked, Marcus and Sam behind, Priya on track.
+- **Process note:** `check-deploy.sh` checks throttling but not header spoofing, so the spoof test is now a documented manual step in the README.
+
 ## Story draft (STAR)
 
 - **Situation:** My earlier AI-built tools were frontend-only and read from CSVs: no persistence, no auth, no multi-user data.

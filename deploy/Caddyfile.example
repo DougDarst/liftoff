@@ -1,0 +1,12 @@
+# Add this block to /etc/caddy/Caddyfile, replacing liftoff.example.com with
+# your domain (and the port, if you changed it in liftoff.service), then run:
+#   sudo systemctl reload caddy
+#
+# Caddy gets and renews the HTTPS certificate automatically and forwards
+# requests to PocketBase, which serves both the API and the frontend. Caddy
+# also replaces any X-Forwarded-For header a visitor sends with the visitor's
+# real IP, which PocketBase uses for rate limiting.
+
+liftoff.example.com {
+	reverse_proxy 127.0.0.1:8091
+}

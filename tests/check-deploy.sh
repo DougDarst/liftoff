@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Post-deploy check for a live Liftoff instance. READ-ONLY: it never creates or changes data.
 #
-#   ./tests/check-deploy.sh https://<instance>.pockethost.io
+#   ./tests/check-deploy.sh https://liftoff.example.com
 #
 # Confirms the site is up, the public demo password no longer works (see TODO.md), sign-in
 # attempts are rate limited, signed-out visitors can't read any data, and the test-only pages
@@ -9,7 +9,7 @@
 
 set -u
 
-URL="${1:?usage: tests/check-deploy.sh https://<instance>.pockethost.io}"
+URL="${1:?usage: tests/check-deploy.sh https://liftoff.example.com}"
 URL="${URL%/}"
 PUBLIC_PASSWORD="liftoff-demo-2026"
 FAIL=0

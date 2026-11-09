@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Cache busting for the frontend. On PocketHost, Cloudflare (and browsers) cache styles.css and
-# app.js for 4 hours, but not index.html. So index.html loads them as "styles.css?v=<hash>" and
+# Cache busting for the frontend. Browsers (and any CDN in front of the site) can cache styles.css
+# and app.js for hours, while index.html is fetched fresh. (On PocketHost, Cloudflare cached them
+# for 4 hours.) So index.html loads them as "styles.css?v=<hash>" and
 # "app.js?v=<hash>", where <hash> comes from the file's contents: change the file, and the URL
 # changes, so visitors get the new version immediately.
 #
