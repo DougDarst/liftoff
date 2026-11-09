@@ -1,0 +1,27 @@
+# systemd service for Liftoff (PocketBase) on a Linux server.
+#
+# Install:
+#   1. Set User and Group to the account that owns /opt/liftoff.
+#   2. sudo cp liftoff.service /etc/systemd/system/liftoff.service
+#   3. sudo systemctl daemon-reload && sudo systemctl enable liftoff
+#
+# PocketBase listens on localhost only, so it can be reached ONLY through Caddy
+# (see Caddyfile.example). That is what makes trusting X-Forwarded-For safe:
+# see "After the first deploy" in the README.
+#
+# Change the port if another app on the server already uses 8091.
+
+[Unit]
+Description=Liftoff (PocketBase)
+After=network.target
+
+[Service]
+User=your-user
+Group=your-user
+WorkingDirectory=/opt/liftoff
+ExecStart=/opt/liftoff/pocketbase serve --http=127.0.0.1:8091 --dir=/opt/liftoff/pb_data --publicDir=/opt/liftoff/pb_public --migrationsDir=/opt/liftoff/pb_migrations
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
